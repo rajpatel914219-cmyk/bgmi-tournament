@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>BGMI Leaderboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body{
+  background:#020617;
+  font-family:Arial;
+  color:white;
+}
+.container{
+  max-width:760px;
+  margin:30px auto;
+  padding:15px;
+}
+h2{text-align:center;}
+
+/* SELECT */
+select{
+  width:100%;
+  padding:12px;
+  margin-bottom:15px;
+  border:none;
+  border-radius:8px;
+  background:#0f172a;
+  color:white;
+  -webkit-appearance:none;
+  appearance:none;
+}
+
+/* 🥇 TOP 3 CARDS */
+.top3{
+  display:flex;
+  gap:12px;
+  margin-bottom:20px;
+}
+.card{
+  flex:1;
+  padding:16px;
+  border-radius:14px;
+  text-align:center;
+  background:#020617;
+  transition:0.3s;
+}
+
+/* 🥇 WINNER GLOW */
+.winner{
+  background:linear-gradient(135deg,#facc15,#ca8a04);
+  color:black;
+  animation:glow 1.5s infinite alternate;
+  box-shadow:0 0 25px #facc15;
+}
+
+/* 🥈 🥉 */
+.silver{ background:#64748b; }
+.bronze{ background:#92400e; }
+
+/* ✨ GLOW ANIMATION */
+@keyframes glow{
+  from{
+    box-shadow:0 0 15px #facc15;
+    transform:scale(1);
+  }
+  to{
+    box-shadow:0 0 35px #fde047;
+    transform:scale(1.03);
+  }
+}
+
+/* TABLE */
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+th,td{
+  padding:10px;
+  text-align:center;
+}
+th{
+  background:#1e293b;
+  color:#38bdf8;
+}
+tr{
+  border-bottom:1px solid #1e293b;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<h2>🏆 BGMI Leaderboard</h2>
+
+<select id="match" onchange="loadData()">
+  <option value="match1">Match 1</option>
+  <option value="match2">Match 2</option>
+  <option value="match3">Match 3</option>
+</select>
+
+<select id="map" onchange="loadData()">
+  <option value="erangel">Erangel</option>
+  <option value="miramar">Miramar</option>
+  <option value="rondo">Rondo</option>
+</select>
+
+<!-- 🥇🥈🥉 TOP 3 -->
+<div class="top3" id="top3"></div>
+
+<table>
+<thead>
+<tr>
+  <th>Rank</th>
+  <th>Team</th>
+  <th>Points</th>
+</tr>
+</thead>
+<tbody id="list"></tbody>
+</table>
+</div>
+
+<script type="module">
+import { initializeApp } from
+"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, onValue }
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+/* FIREBASE CONFIG */
+const firebaseConfig = {
+  apiKey: "AIzaSyDsJUtZdIXcsB0w_2MQhMBXxIgbI3ijOvg",
+  authDomain: "incoinpaysliveearning.firebaseapp.com",
+  databaseURL: "https://incoinpaysliveearning-default-rtdb.firebaseio.com",
+  projectId: "incoinpaysliveearning",
+  storageBucket: "incoinpaysliveearning.firebasestorage.app",
+  messagingSenderId: "971873814750",
+  appId: "1:971873814750:web:7418c7da119e4725ed9a4f"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+window.loadData = ()=>{
+  const match = document.getElementById("match").value;
+  const map = document.getElementById("map").value;
+  const top3 = document.getElementById("top3");
+  const list = document.getElementById("list");
+
+  onValue(ref(db,`leaderboard/${match}/${map}`),(snap)=>{
+    top3.innerHTML="";
+    list.innerHTML="";
+
+    if(!snap.exists()){
+      list.innerHTML="<tr><td colspan='3'>No Data</td></tr>";
+      return;
+    }
+
+    const data = Object.values(snap.val());
+
+    const sorted = data.sort((a,b)=>b.points-a.points);
+
+    /* 🥇🥈🥉 TOP 3 CARDS */
+    sorted.slice(0,3).forEach((p,i)=>{
+      let cls = i==0 ? "winner" : i==1 ? "silver" : "bronze";
+      top3.innerHTML += `
+        <div class="card ${cls}">
+          <h3>#${i+1}</h3>
+          <p>${p.name}</p>
+          <b>${p.points} pts</b>
+        </div>
+      `;
+    });
+
+    /* FULL TABLE */
+    sorted.forEach((p,i)=>{
+      list.innerHTML += `
+        <tr>
+          <td>#${i+1}</td>
+          <td>${p.name}</td>
+          <td>${p.points}</td>
+        </tr>
+      `;
+    });
+  });
+};
+
+loadData();
+</script>
+
+</body>
+</html>

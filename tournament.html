@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>BGMI Tournament</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body{
+  background:#020617;
+  color:white;
+  font-family:Arial;
+}
+.box{
+  width:380px;
+  margin:20px auto;
+  background:#0f172a;
+  padding:15px;
+  border-radius:10px;
+}
+h2,h3{
+  text-align:center;
+}
+.stat{
+  background:#1e293b;
+  padding:10px;
+  border-radius:6px;
+  margin:8px 0;
+  text-align:center;
+  font-size:15px;
+}
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+td,th{
+  border:1px solid #334155;
+  padding:6px;
+  text-align:center;
+}
+.top1{background:#facc15;color:black}
+.top2{background:#94a3b8;color:black}
+.top3{background:#cd7f32;color:black}
+</style>
+</head>
+
+<body>
+
+<div class="box">
+  <h2>🔥 BGMI Tournament</h2>
+
+  <div class="stat">
+    ⏳ Match Starts In:
+    <span id="timer">--</span>
+  </div>
+
+  <div class="stat">
+    👥 Players Joined:
+    <span id="players">0</span>
+  </div>
+
+  <h3>🏆 Kill Leaderboard</h3>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Rank</th>
+        <th>Name</th>
+        <th>Kills</th>
+        <th>Points</th>
+      </tr>
+    </thead>
+    <tbody id="leaderboard"></tbody>
+  </table>
+</div>
+
+<!-- 🔥 FIREBASE -->
+<script type="module">
+import { initializeApp } from
+"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, onValue }
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+/* 🔑 FIREBASE CONFIG */
+const firebaseConfig = {
+  apiKey: "AIzaSyDsJUtZdIXcsB0w_2MQhMBXxIgbI3ijOvg",
+  databaseURL: "https://incoinpaysliveearning-default-rtdb.firebaseio.com",
+  projectId: "incoinpaysliveearning"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+/* 🎮 CURRENT SLOT */
+const SLOT = "6PM";
+
+/* 👥 LIVE PLAYER COUNT */
+const playerRef = ref(db, `bookings/${SLOT}`);
+
+onValue(playerRef, snap => {
+  document.getElementById("players").innerText =
+    snap.exists() ? Object.keys(snap.val()).length : 0;
+});
+
+/* ⏳ MATCH TIMER */
+const MATCH_TIME = new Date();
+MATCH_TIME.setHours(18,0,0,0); // 6:00 PM
+
+setInterval(()=>{
+  const now = new Date().getTime();
+  const diff = MATCH_TIME.getTime() - now;
+
+  if(diff <= 0){
+    document.getElementById("timer").innerText = "MATCH STARTED";
+    return;
+  }
+
+  const m = Math.floor(diff / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  document.getElementById("timer").innerText = `${m}m ${s}s`;
+},1000);
+
+/* 🏆 LIVE LEADERBOARD */
+const lbRef = ref(db, `leaderboard/${SLOT}`);
+
+onValue(lbRef, snap => {
+  let data = snap.val();
+  if(!data) return;
+
+  let rows = Object.values(data);
+  rows.sort((a,b)=>b.points - a.points);
+
+  let html="";
+  rows.forEach((r,i)=>{
+    let cls = i==0?"top1":i==1?"top2":i==2?"top3":"";
+    html+=`
+      <tr class="${cls}">
+        <td>${i+1}</td>
+        <td>${r.name}</td>
+        <td>${r.kills}</td>
+        <td>${r.points}</td>
+      </tr>
+    `;
+  });
+
+  document.getElementById("leaderboard").innerHTML = html;
+});
+</script>
+
+</body>
+</html>

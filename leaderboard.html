@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>BGMI Leaderboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body{
+  background:#020617;
+  font-family:Arial;
+  color:white;
+}
+.container{
+  max-width:720px;
+  margin:30px auto;
+  padding:15px;
+}
+h2{text-align:center;}
+
+select{
+  width:100%;
+  padding:10px;
+  margin-bottom:20px;
+  border-radius:6px;
+  border:none;
+}
+
+/* 🥇 TOP 3 CARDS */
+.top3{
+  display:flex;
+  gap:10px;
+  margin-bottom:20px;
+}
+.card{
+  flex:1;
+  padding:15px;
+  border-radius:10px;
+  text-align:center;
+}
+.gold{ background:#ca8a04; }
+.silver{ background:#64748b; }
+.bronze{ background:#92400e; }
+
+/* TABLE */
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+th,td{
+  padding:10px;
+  text-align:center;
+}
+th{
+  background:#1e293b;
+  color:#38bdf8;
+}
+tr{
+  border-bottom:1px solid #1e293b;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<h2>🏆 BGMI Leaderboard</h2>
+
+<select id="match" onchange="loadData()">
+  <option value="match1">Match 1</option>
+  <option value="match2">Match 2</option>
+  <option value="match3">Match 3</option>
+</select>
+
+<div class="top3" id="top3"></div>
+
+<table>
+<thead>
+<tr>
+  <th>Rank</th>
+  <th>Player</th>
+  <th>Kills</th>
+  <th>Points</th>
+</tr>
+</thead>
+<tbody id="list"></tbody>
+</table>
+</div>
+
+<script type="module">
+import { initializeApp } from
+"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, onValue }
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+/* FIREBASE CONFIG */
+const firebaseConfig = {
+  apiKey: "AIzaSyDsJUtZdIXcsB0w_2MQhMBXxIgbI3ijOvg",
+  authDomain: "incoinpaysliveearning.firebaseapp.com",
+  databaseURL: "https://incoinpaysliveearning-default-rtdb.firebaseio.com",
+  projectId: "incoinpaysliveearning",
+  storageBucket: "incoinpaysliveearning.firebasestorage.app",
+  messagingSenderId: "971873814750",
+  appId: "1:971873814750:web:7418c7da119e4725ed9a4f"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+window.loadData = ()=>{
+  const match = document.getElementById("match").value;
+  const list = document.getElementById("list");
+  const top3 = document.getElementById("top3");
+
+  onValue(ref(db,"leaderboard/"+match),(snap)=>{
+    list.innerHTML="";
+    top3.innerHTML="";
+
+    if(!snap.exists()){
+      list.innerHTML="<tr><td colspan='4'>No Data</td></tr>";
+      return;
+    }
+
+    const players = Object.values(snap.val())
+      .sort((a,b)=>b.points-a.points);
+
+    /* TOP 3 */
+    const colors=["gold","silver","bronze"];
+    players.slice(0,3).forEach((p,i)=>{
+      top3.innerHTML+=`
+        <div class="card ${colors[i]}">
+          <h3>#${i+1}</h3>
+          <p>${p.name}</p>
+          <b>${p.points} pts</b>
+        </div>`;
+    });
+
+    /* TABLE */
+    players.forEach((p,i)=>{
+      list.innerHTML+=`
+      <tr>
+        <td>#${i+1}</td>
+        <td>${p.name}</td>
+        <td>${p.kills}</td>
+        <td>${p.points}</td>
+      </tr>`;
+    });
+  });
+};
+
+loadData();
+</script>
+
+</body>
+</html>

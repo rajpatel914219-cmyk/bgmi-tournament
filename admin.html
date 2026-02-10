@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>BGMI Admin Panel</title>
+
+<style>
+body{
+  background:#020617;
+  font-family:Arial;
+  color:white;
+}
+.box{
+  width:420px;
+  margin:40px auto;
+  background:#0f172a;
+  padding:20px;
+  border-radius:12px;
+  text-align:center;
+}
+h2{
+  margin-bottom:20px;
+}
+.card{
+  background:#020617;
+  padding:15px;
+  margin:12px 0;
+  border-radius:10px;
+  cursor:pointer;
+  transition:0.3s;
+}
+.card:hover{
+  background:#1e293b;
+}
+.card span{
+  display:block;
+  font-size:14px;
+  opacity:0.8;
+}
+</style>
+</head>
+
+<body>
+
+<div class="box">
+  <h2>BGMI ADMIN PANEL</h2>
+
+  <div class="card" onclick="openPage('admin-accesskey.html')">
+    🔑 Access Key & Slots
+    <span>Create key • Set price • 3h expiry</span>
+  </div>
+
+  <div class="card" onclick="openPage('bookslot-list.html')">
+    📋 Booked Slot List
+    <span>View all player bookings</span>
+  </div>
+
+  <div class="card" onclick="openPage('leaderboard.html')">
+    🏆 Kill Points Leaderboard
+    <span>Update & manage kills</span>
+  </div>
+
+  <div class="card" onclick="openPage('roomid.html')">
+    🎮 Room ID & Password
+    <span>Send room details to players</span>
+  </div>
+</div>
+
+<script>
+/* 🔐 AUTO LOGOUT AFTER 7 DAYS */
+const MAX_DAYS = 7;
+const now = Date.now();
+
+let loginTime = localStorage.getItem("admin_login_time");
+
+if(!loginTime){
+  localStorage.setItem("admin_login_time", now);
+}else{
+  const daysPassed = (now - loginTime) / (1000 * 60 * 60 * 24);
+  if(daysPassed >= MAX_DAYS){
+    localStorage.removeItem("admin_login_time");
+    alert("Session expired. Please login again.");
+    window.location.href = "../index.html";
+  }
+}
+
+function openPage(page){
+  window.location.href = page;
+}
+</script>
+
+</body>
+</html>
