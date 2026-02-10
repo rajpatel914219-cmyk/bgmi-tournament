@@ -6,16 +6,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
-*{
-  box-sizing:border-box;
-  -webkit-tap-highlight-color:transparent;
-}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 
 body{
   margin:0;
   min-height:100vh;
   background:radial-gradient(circle at top,#0b1220,#020617);
-  font-family:Arial, sans-serif;
+  font-family:Arial,sans-serif;
   color:white;
   display:flex;
   justify-content:center;
@@ -23,59 +20,23 @@ body{
   padding:16px 12px;
 }
 
-/* ================= LOBBY CARD ================= */
 .lobby{
   width:100%;
   max-width:420px;
   background:linear-gradient(180deg,#0f172a,#020617);
   border-radius:18px;
   padding:18px;
-  box-shadow:
-    0 0 30px rgba(34,197,94,.18),
-    inset 0 0 15px rgba(0,0,0,.6);
-  animation:lobbyIn .5s ease;
-  position:relative;
+  box-shadow:0 0 30px rgba(34,197,94,.18),
+             inset 0 0 15px rgba(0,0,0,.6);
 }
 
-.lobby.pop{
-  animation:pop .35s ease;
-}
-
-/* ================= RULES BUTTON (INSIDE CARD) ================= */
-.rules-btn{
-  position:absolute;
-  top:12px;
-  right:12px;
-  background:#020617;
-  border:1px solid #38bdf8;
-  color:#38bdf8;
-  font-size:11px;
-  font-weight:bold;
-  padding:6px 10px;
-  border-radius:8px;
-  box-shadow:0 0 10px rgba(56,189,248,.45);
-  cursor:pointer;
-}
-
-.rules-btn:active{
-  transform:scale(.95);
-}
-
-/* ================= HEADER ================= */
-.header{
-  text-align:center;
-  margin-bottom:14px;
-}
-
+.header{text-align:center;margin-bottom:14px}
 .header h2{
   margin:0;
   font-size:18px;
-  letter-spacing:1px;
   color:#22c55e;
-  text-shadow:0 0 14px rgba(34,197,94,.8);
 }
 
-/* ================= INPUTS ================= */
 input,button{
   width:100%;
   padding:13px;
@@ -85,102 +46,21 @@ input,button{
   font-size:15px;
 }
 
-input{
-  background:#020617;
-  color:white;
-  box-shadow:inset 0 0 6px rgba(0,0,0,.6);
-}
-
-input::placeholder{
-  color:#94a3b8;
-}
-
-/* ================= BUTTON ================= */
+input{background:#020617;color:white}
 button{
   background:linear-gradient(135deg,#22c55e,#16a34a);
-  color:#022c22;
   font-weight:bold;
   cursor:pointer;
-  box-shadow:0 6px 0 #065f46;
-  transition:.12s;
 }
 
-button:active{
-  transform:translateY(4px);
-  box-shadow:0 2px 0 #065f46;
-}
-
-/* ================= STATUS ================= */
-#msg{
-  margin-top:10px;
-  text-align:center;
-  font-weight:bold;
-  font-size:14px;
-}
-
-/* ================= SECTIONS ================= */
+#msg{text-align:center;font-weight:bold;margin-top:10px}
 .hidden{display:none}
-
-/* ================= SLOT GRID ================= */
-.slots{
-  margin-top:16px;
-  display:grid;
-  grid-template-columns:repeat(4,1fr);
-  gap:10px;
-}
-
-.slot{
-  height:42px;
-  background:#020617;
-  border-radius:10px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:12px;
-  color:#64748b;
-  border:1px solid #020617;
-  transition:.3s;
-}
-
-.slot.fill{
-  background:linear-gradient(135deg,#22c55e,#16a34a);
-  color:#022c22;
-  font-weight:bold;
-  box-shadow:0 0 15px rgba(34,197,94,.8);
-  animation:slotFill .3s ease;
-}
-
-/* ================= ANIMATIONS ================= */
-@keyframes lobbyIn{
-  from{opacity:0;transform:scale(.94)}
-  to{opacity:1;transform:scale(1)}
-}
-
-@keyframes pop{
-  0%{transform:scale(1)}
-  45%{transform:scale(1.05)}
-  100%{transform:scale(1)}
-}
-
-@keyframes slotFill{
-  from{transform:scale(.6)}
-  to{transform:scale(1)}
-}
-
-/* ================= MOBILE ================= */
-@media(max-width:360px){
-  .header h2{font-size:16px}
-  .slot{height:36px;font-size:11px}
-}
 </style>
 </head>
 
 <body>
 
-<div class="lobby" id="lobby">
-
-  <!-- RULES BUTTON -->
-  <div class="rules-btn" onclick="openRules()">RULES</div>
+<div class="lobby">
 
   <div class="header">
     <h2>🎮 BGMI SLOT BOOKING</h2>
@@ -189,75 +69,128 @@ button:active{
   <!-- ACCESS KEY -->
   <div id="keySection">
     <input id="accessKey" placeholder="Enter Access Key">
-    <button onclick="verifyKey()">LET'S GO</button>
+    <button onclick="verifyKey()">ENTER LOBBY</button>
   </div>
 
   <!-- BOOKING -->
   <div id="booking" class="hidden">
-    <input id="name" placeholder="PLAYER NAME" oninput="this.value=this.value.toUpperCase()">
-    <input id="bgmi" placeholder="BGMI ID">
-    <input value="₹50 ENTRY FEE" readonly>
+    <input id="playerName" placeholder="PLAYER NAME"
+      oninput="this.value=this.value.toUpperCase()">
+    <input id="bgmiId" placeholder="BGMI ID">
     <button onclick="book()">CONFIRM SLOT</button>
-
-    <div class="slots" id="slots"></div>
   </div>
 
   <p id="msg"></p>
 </div>
 
-<script>
-const lobby=document.getElementById("lobby");
-const slotsDiv=document.getElementById("slots");
-const TOTAL=16;
-let booked=0;
+<!-- 🔥 FIREBASE -->
+<script type="module">
+import { initializeApp } from
+"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, get, push, update }
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-/* CREATE SLOTS */
-for(let i=1;i<=TOTAL;i++){
-  const s=document.createElement("div");
-  s.className="slot";
-  s.innerText="SLOT "+i;
-  slotsDiv.appendChild(s);
-}
+const firebaseConfig = {
+  apiKey: "AIzaSyDsJUtZdIXcsB0w_2MQhMBXxIgbI3ijOvg",
+  databaseURL: "https://incoinpaysliveearning-default-rtdb.firebaseio.com",
+  projectId: "incoinpaysliveearning"
+};
 
-/* OPEN RULES */
-function openRules(){
-  window.open("rules.html","_blank");
-}
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
-/* VERIFY */
-function verifyKey(){
-  if(!accessKey.value.trim()){
-    msg.innerHTML="❌ Enter access key";
-    msg.style.color="red";
+let currentKey = "";
+
+/* 🔑 VERIFY KEY */
+window.verifyKey = async ()=>{
+  const key = document.getElementById("accessKey").value.trim();
+  const msg = document.getElementById("msg");
+
+  const keySection = document.getElementById("keySection");
+  const booking = document.getElementById("booking");
+
+  if(!key){
+    msg.innerText = "❌ Enter access key";
+    msg.style.color = "red";
     return;
   }
-  lobby.classList.add("pop");
-  keySection.style.display="none";
-  booking.classList.remove("hidden");
-  msg.innerHTML="✅ Lobby Joined";
-  msg.style.color="#22c55e";
-}
 
-/* BOOK SLOT */
-function book(){
-  if(!name.value||!bgmi.value){
-    msg.innerHTML="❌ Fill all details";
-    msg.style.color="red";
+  try{
+    const snap = await get(ref(db,"accessKeys/"+key));
+
+    if(!snap.exists()){
+      msg.innerText = "❌ Invalid access key";
+      msg.style.color = "red";
+      return;
+    }
+
+    const data = snap.val();
+
+    if(Date.now() > data.expireAt){
+      msg.innerText = "⏳ Key expired";
+      msg.style.color = "red";
+      return;
+    }
+
+    if(data.used === true){
+      msg.innerText = "🔐 Key already used";
+      msg.style.color = "red";
+      return;
+    }
+
+    currentKey = key;
+    keySection.style.display = "none";
+    booking.classList.remove("hidden");
+
+    msg.innerText = "✅ Lobby Joined";
+    msg.style.color = "#22c55e";
+
+  }catch(err){
+    msg.innerText = "❌ Error verifying key";
+    msg.style.color = "red";
+    console.error(err);
+  }
+};
+
+/* 🎮 BOOK SLOT */
+window.book = async ()=>{
+  const name = document.getElementById("playerName").value.trim();
+  const bgmi = document.getElementById("bgmiId").value.trim();
+  const msg = document.getElementById("msg");
+
+  if(!name || !bgmi){
+    msg.innerText = "❌ Fill all details";
+    msg.style.color = "red";
     return;
   }
-  if(booked>=TOTAL){
-    msg.innerHTML="🚫 Lobby Full";
-    msg.style.color="red";
-    return;
+
+  try{
+    // SAVE BOOKING
+    await push(ref(db,"bookings"),{
+      name: name,
+      bgmi: bgmi,
+      time: Date.now()
+    });
+
+    // MARK KEY USED
+    await update(ref(db,"accessKeys/"+currentKey),{
+      used: true
+    });
+
+    msg.innerText = "✅ Slot Booked Successfully";
+    msg.style.color = "#22c55e";
+
+    // 🔁 REDIRECT TO TOURNAMENT PAGE
+    setTimeout(()=>{
+      window.location.href = "tournament.html";
+    },1500);
+
+  }catch(err){
+    msg.innerText = "❌ Booking failed";
+    msg.style.color = "red";
+    console.error(err);
   }
-  const s=document.querySelectorAll(".slot")[booked];
-  s.classList.add("fill");
-  s.innerText=name.value;
-  booked++;
-  lobby.classList.add("pop");
-  msg.innerHTML=`✅ Slot Confirmed (${booked}/${TOTAL})`;
-  msg.style.color="#22c55e";
-}
+};
 </script>
 
 </body>
