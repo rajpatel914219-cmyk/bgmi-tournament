@@ -2,195 +2,135 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>BGMI SLOT BOOKING</title>
+<title>BGMI Tournament</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+*{
+  box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
+}
 
 body{
   margin:0;
+  font-family:Arial, sans-serif;
   min-height:100vh;
   background:radial-gradient(circle at top,#0b1220,#020617);
-  font-family:Arial,sans-serif;
-  color:white;
   display:flex;
   justify-content:center;
-  align-items:flex-start;
-  padding:16px 12px;
+  align-items:center;
+  color:white;
 }
 
-.lobby{
+.container{
   width:100%;
   max-width:420px;
   background:linear-gradient(180deg,#0f172a,#020617);
   border-radius:18px;
-  padding:18px;
-  box-shadow:0 0 30px rgba(34,197,94,.18),
+  padding:25px;
+  box-shadow:0 0 30px rgba(34,197,94,.2),
              inset 0 0 15px rgba(0,0,0,.6);
+  text-align:center;
 }
 
-.header{text-align:center;margin-bottom:14px}
-.header h2{
-  margin:0;
-  font-size:18px;
+.logo{
+  font-size:22px;
+  font-weight:bold;
   color:#22c55e;
+  margin-bottom:10px;
 }
 
-input,button{
+.subtitle{
+  font-size:14px;
+  color:#94a3b8;
+  margin-bottom:25px;
+}
+
+button{
   width:100%;
-  padding:13px;
-  margin:8px 0;
+  padding:14px;
+  margin:10px 0;
   border:none;
   border-radius:12px;
   font-size:15px;
-}
-
-input{background:#020617;color:white}
-button{
-  background:linear-gradient(135deg,#22c55e,#16a34a);
   font-weight:bold;
   cursor:pointer;
+  transition:0.3s;
 }
 
-#msg{text-align:center;font-weight:bold;margin-top:10px}
-.hidden{display:none}
+.primary{
+  background:linear-gradient(135deg,#22c55e,#16a34a);
+  color:white;
+}
+
+.secondary{
+  background:#1e293b;
+  color:white;
+}
+
+.admin{
+  background:#ef4444;
+  color:white;
+}
+
+button:hover{
+  transform:scale(1.03);
+  opacity:0.9;
+}
+
+.footer{
+  margin-top:20px;
+  font-size:12px;
+  color:#64748b;
+}
 </style>
 </head>
 
 <body>
 
-<div class="lobby">
+<div class="container">
 
-  <div class="header">
-    <h2>🎮 BGMI SLOT BOOKING</h2>
+  <div class="logo">🎮 BGMI TOURNAMENT</div>
+  <div class="subtitle">Play • Compete • Win</div>
+
+  <button class="primary" onclick="goBooking()">
+    🔑 Join Tournament
+  </button>
+
+  <button class="secondary" onclick="goLeaderboard()">
+    📊 Live Leaderboard
+  </button>
+
+  <button class="secondary" onclick="goSpectator()">
+    📱 Spectator Mode
+  </button>
+
+  <button class="admin" onclick="goAdmin()">
+    🔐 Admin Panel
+  </button>
+
+  <div class="footer">
+    © 2026 BGMI Tournament System
   </div>
 
-  <!-- ACCESS KEY -->
-  <div id="keySection">
-    <input id="accessKey" placeholder="Enter Access Key">
-    <button onclick="verifyKey()">ENTER LOBBY</button>
-  </div>
-
-  <!-- BOOKING -->
-  <div id="booking" class="hidden">
-    <input id="playerName" placeholder="PLAYER NAME"
-      oninput="this.value=this.value.toUpperCase()">
-    <input id="bgmiId" placeholder="BGMI ID">
-    <button onclick="book()">CONFIRM SLOT</button>
-  </div>
-
-  <p id="msg"></p>
 </div>
 
-<!-- 🔥 FIREBASE -->
-<script type="module">
-import { initializeApp } from
-"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, get, push, update }
-from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+<script>
+function goBooking(){
+  window.location.href = "booking.html";
+}
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDsJUtZdIXcsB0w_2MQhMBXxIgbI3ijOvg",
-  databaseURL: "https://incoinpaysliveearning-default-rtdb.firebaseio.com",
-  projectId: "incoinpaysliveearning"
-};
+function goLeaderboard(){
+  window.location.href = "leaderboard.html";
+}
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+function goSpectator(){
+  window.location.href = "spectator.html";
+}
 
-let currentKey = "";
-
-/* 🔑 VERIFY KEY */
-window.verifyKey = async ()=>{
-  const key = document.getElementById("accessKey").value.trim();
-  const msg = document.getElementById("msg");
-
-  const keySection = document.getElementById("keySection");
-  const booking = document.getElementById("booking");
-
-  if(!key){
-    msg.innerText = "❌ Enter access key";
-    msg.style.color = "red";
-    return;
-  }
-
-  try{
-    const snap = await get(ref(db,"accessKeys/"+key));
-
-    if(!snap.exists()){
-      msg.innerText = "❌ Invalid access key";
-      msg.style.color = "red";
-      return;
-    }
-
-    const data = snap.val();
-
-    if(Date.now() > data.expireAt){
-      msg.innerText = "⏳ Key expired";
-      msg.style.color = "red";
-      return;
-    }
-
-    if(data.used === true){
-      msg.innerText = "🔐 Key already used";
-      msg.style.color = "red";
-      return;
-    }
-
-    currentKey = key;
-    keySection.style.display = "none";
-    booking.classList.remove("hidden");
-
-    msg.innerText = "✅ Lobby Joined";
-    msg.style.color = "#22c55e";
-
-  }catch(err){
-    msg.innerText = "❌ Error verifying key";
-    msg.style.color = "red";
-    console.error(err);
-  }
-};
-
-/* 🎮 BOOK SLOT */
-window.book = async ()=>{
-  const name = document.getElementById("playerName").value.trim();
-  const bgmi = document.getElementById("bgmiId").value.trim();
-  const msg = document.getElementById("msg");
-
-  if(!name || !bgmi){
-    msg.innerText = "❌ Fill all details";
-    msg.style.color = "red";
-    return;
-  }
-
-  try{
-    // SAVE BOOKING
-    await push(ref(db,"bookings"),{
-      name: name,
-      bgmi: bgmi,
-      time: Date.now()
-    });
-
-    // MARK KEY USED
-    await update(ref(db,"accessKeys/"+currentKey),{
-      used: true
-    });
-
-    msg.innerText = "✅ Slot Booked Successfully";
-    msg.style.color = "#22c55e";
-
-    // 🔁 REDIRECT TO TOURNAMENT PAGE
-    setTimeout(()=>{
-      window.location.href = "tournament.html";
-    },1500);
-
-  }catch(err){
-    msg.innerText = "❌ Booking failed";
-    msg.style.color = "red";
-    console.error(err);
-  }
-};
+function goAdmin(){
+  window.location.href = "admin-login.html";
+}
 </script>
 
 </body>
