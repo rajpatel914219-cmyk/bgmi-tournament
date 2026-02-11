@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>BGMI Room ID Control</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body{
+  margin:0;
+  background:#020617;
+  font-family:Arial;
+  color:white;
+}
+
+.box{
+  max-width:500px;
+  margin:60px auto;
+  background:#0f172a;
+  padding:25px;
+  border-radius:14px;
+}
+
+h2{
+  text-align:center;
+  margin-bottom:20px;
+}
+
+input{
+  width:100%;
+  padding:10px;
+  margin-bottom:12px;
+  border-radius:8px;
+  border:1px solid #1e293b;
+  background:#020617;
+  color:white;
+  font-size:14px;
+}
+
+button{
+  width:100%;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid #22c55e;
+  background:#1e293b;
+  color:#22c55e;
+  cursor:pointer;
+  font-size:14px;
+  margin-bottom:10px;
+}
+
+button:hover{
+  background:#22c55e;
+  color:black;
+}
+
+.status{
+  text-align:center;
+  margin-top:10px;
+  font-size:13px;
+  color:#22c55e;
+}
+
+.roomDisplay{
+  margin-top:20px;
+  padding:12px;
+  background:#020617;
+  border-radius:8px;
+  border:1px solid #1e293b;
+  text-align:center;
+}
+</style>
+</head>
+
+<body>
+
+<div class="box">
+  <h2>🎮 BGMI Room Control</h2>
+
+  <input type="text" id="roomId" placeholder="Enter Room ID">
+  <input type="text" id="roomPass" placeholder="Enter Room Password">
+
+  <button onclick="saveRoom()">💾 Save Room Details</button>
+  <button onclick="clearRoom()">🧹 Clear Room</button>
+
+  <div class="status" id="status"></div>
+
+  <div class="roomDisplay">
+    <div><b>Live Room ID:</b> <span id="liveId">-</span></div>
+    <div><b>Password:</b> <span id="livePass">-</span></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from
+"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, set, onValue, remove }
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+/* 🔥 Firebase Config */
+const firebaseConfig = {
+  apiKey: "AIzaSyDsJUtZdIXcsB0w_2MQhMBXxIgbI3ijOvg",
+  databaseURL: "https://incoinpaysliveearning-default-rtdb.firebaseio.com",
+  projectId: "incoinpaysliveearning"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const statusDiv = document.getElementById("status");
+
+/* SAVE ROOM */
+window.saveRoom = function(){
+  const id = document.getElementById("roomId").value;
+  const pass = document.getElementById("roomPass").value;
+
+  if(!id || !pass){
+    alert("Enter Room ID & Password");
+    return;
+  }
+
+  set(ref(db,"room"),{
+    roomId:id,
+    roomPass:pass
+  });
+
+  statusDiv.innerText="✅ Room Details Saved!";
+  document.getElementById("roomId").value="";
+  document.getElementById("roomPass").value="";
+};
+
+/* CLEAR ROOM */
+window.clearRoom = function(){
+  if(confirm("Clear Room Details?")){
+    remove(ref(db,"room"));
+    statusDiv.innerText="🧹 Room Cleared!";
+  }
+};
+
+/* LIVE DISPLAY */
+onValue(ref(db,"room"), snap=>{
+  if(snap.exists()){
+    const d = snap.val();
+    document.getElementById("liveId").innerText=d.roomId;
+    document.getElementById("livePass").innerText=d.roomPass;
+  }else{
+    document.getElementById("liveId").innerText="-";
+    document.getElementById("livePass").innerText="-";
+  }
+});
+</script>
+
+</body>
+</html>

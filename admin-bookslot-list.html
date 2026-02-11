@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>BGMI Tournament Admin Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body{
+  margin:0;
+  background:#020617;
+  font-family:Arial;
+  color:white;
+}
+
+.box{
+  max-width:1200px;
+  margin:20px auto;
+  background:#0f172a;
+  padding:20px;
+  border-radius:14px;
+}
+
+h2{
+  text-align:center;
+  margin-bottom:15px;
+}
+
+/* CONTROLS */
+.controls{
+  display:flex;
+  gap:10px;
+  justify-content:center;
+  flex-wrap:wrap;
+  margin-bottom:15px;
+}
+
+button{
+  background:#1e293b;
+  color:#22c55e;
+  border:1px solid #22c55e;
+  padding:6px 12px;
+  border-radius:8px;
+  cursor:pointer;
+  font-size:12px;
+}
+
+button:hover{
+  background:#22c55e;
+  color:black;
+}
+
+/* SMALL SLOT GRID */
+.slots{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:8px;
+}
+
+.slot{
+  background:#020617;
+  border:1px solid #1e293b;
+  border-radius:8px;
+  padding:8px;
+  min-height:85px;
+  cursor:pointer;
+  transition:0.3s;
+  font-size:11px;
+}
+
+.slot.booked{
+  background:linear-gradient(135deg,#052e16,#022c22);
+  border-color:#22c55e;
+  box-shadow:0 0 8px rgba(34,197,94,.5);
+}
+
+.teamName{
+  font-weight:bold;
+  color:#38bdf8;
+  margin-bottom:4px;
+  font-size:12px;
+}
+
+.player{
+  font-size:11px;
+}
+
+.captain{
+  color:#facc15;
+  font-weight:bold;
+}
+
+/* MOBILE */
+@media(max-width:768px){
+  .slots{
+    grid-template-columns:repeat(2,1fr);
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="box">
+<h2>🎮 BGMI TOURNAMENT DASHBOARD</h2>
+
+<div class="controls">
+  <button onclick="clearAll()">🧹 Clear All Teams</button>
+  <button onclick="exportCSV()">📁 Export CSV</button>
+</div>
+
+<div class="slots" id="slots"></div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from
+"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, onValue, remove }
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+/* 🔥 FIREBASE CONFIG */
+const firebaseConfig = {
+  apiKey: "AIzaSyDsJUtZdIXcsB0w_2MQhMBXxIgbI3ijOvg",
+  databaseURL: "https://incoinpaysliveearning-default-rtdb.firebaseio.com",
+  projectId: "incoinpaysliveearning"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const slotsDiv = document.getElementById("slots");
+const TOTAL_TEAMS = 25;
+
+let bookingData = {};
+
+/* DRAW EMPTY GRID */
+function drawEmpty(){
+  slotsDiv.innerHTML="";
+  for(let i=1;i<=TOTAL_TEAMS;i++){
+    slotsDiv.innerHTML+=`
+      <div class="slot" id="team-${i}">
+        <div class="teamName">Team ${i}</div>
+        <div>Empty</div>
+      </div>
+    `;
+  }
+}
+drawEmpty();
+
+/* REALTIME BOOKINGS */
+onValue(ref(db,"bookings"), snap=>{
+  drawEmpty();
+  bookingData={};
+  if(!snap.exists()) return;
+
+  let i=1;
+  snap.forEach(child=>{
+    if(i > TOTAL_TEAMS) return;
+
+    const d = child.val();
+    bookingData[i] = child.key;
+
+    const slot = document.getElementById("team-"+i);
+    slot.classList.add("booked");
+
+    let playersHTML="";
+    if(d.players){
+      d.players.forEach((p,index)=>{
+        if(index===0){
+          playersHTML+=`<div class="player captain">👑 ${p.name}</div>`;
+        }else{
+          playersHTML+=`<div class="player">${p.name}</div>`;
+        }
+      });
+    }
+
+    slot.innerHTML=`
+      <div class="teamName">${d.teamName}</div>
+      ${playersHTML}
+    `;
+
+    slot.onclick=()=>deleteTeam(i);
+
+    i++;
+  });
+});
+
+/* DELETE FULL TEAM */
+function deleteTeam(teamNo){
+  const key = bookingData[teamNo];
+  if(!key) return;
+
+  if(confirm("Delete Full Team?")){
+    remove(ref(db,"bookings/"+key));
+  }
+}
+
+/* CLEAR ALL */
+window.clearAll=()=>{
+  if(confirm("Clear ALL Teams?")){
+    remove(ref(db,"bookings"));
+  }
+};
+
+/* EXPORT CSV */
+window.exportCSV=()=>{
+  let csv="Team,Player Name\n";
+
+  const slots=document.querySelectorAll(".slot.booked");
+  slots.forEach(slot=>{
+    const teamName=slot.querySelector(".teamName").innerText;
+    const players=slot.querySelectorAll(".player");
+
+    players.forEach(p=>{
+      csv+=`${teamName},${p.innerText.replace("👑 ","")}\n`;
+    });
+  });
+
+  const blob=new Blob([csv],{type:"text/csv"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="tournament-teams.csv";
+  a.click();
+};
+</script>
+
+</body>
+</html>

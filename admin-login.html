@@ -1,113 +1,183 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>Admin Login</title>
+<meta charset="UTF-8">
+<title>Admin Login - BGMI Tournament</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
+*{box-sizing:border-box;margin:0;padding:0}
+
 body{
-  background:#020617;
-  font-family:Arial;
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-family:Arial, sans-serif;
+  background:radial-gradient(circle at top,#0f172a,#020617);
   color:white;
+  padding:15px;
 }
-.box{
-  width:360px;
-  margin:80px auto;
-  background:#0f172a;
+
+.login-box{
+  width:100%;
+  max-width:380px;
+  background:linear-gradient(180deg,#0b1220,#020617);
+  border-radius:20px;
   padding:25px;
-  border-radius:12px;
-  text-align:center;
+  box-shadow:0 0 40px rgba(34,197,94,.25);
 }
-h2{
+
+.title{
+  text-align:center;
+  font-size:20px;
+  font-weight:bold;
+  color:#22c55e;
   margin-bottom:20px;
 }
-input,button{
+
+input{
   width:100%;
-  padding:12px;
+  padding:14px;
   margin:10px 0;
   border:none;
-  border-radius:6px;
+  border-radius:12px;
+  background:#111827;
+  color:white;
+  font-size:14px;
 }
+
 button{
-  background:#22c55e;
+  width:100%;
+  padding:14px;
+  border:none;
+  border-radius:12px;
+  background:linear-gradient(135deg,#22c55e,#16a34a);
   font-weight:bold;
   cursor:pointer;
-}
-#msg{
   margin-top:10px;
+}
+
+button:hover{
+  opacity:.9;
+}
+
+#msg{
+  text-align:center;
+  margin-top:12px;
   font-size:14px;
+  font-weight:bold;
 }
 </style>
 </head>
 
 <body>
 
-<div class="box">
-  <h2>ADMIN LOGIN</h2>
+<div class="login-box">
+  <div class="title">🔐 ADMIN LOGIN</div>
 
-  <input id="email" type="email" placeholder="Admin Email">
-  <input id="password" type="password" placeholder="Password">
+  <input type="email" id="email" placeholder="Admin Email">
+  <input type="password" id="password" placeholder="Password">
 
   <button onclick="login()">LOGIN</button>
 
   <p id="msg"></p>
 </div>
 
-<!-- ============ FIREBASE AUTH ============ -->
 <script type="module">
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { initializeApp } 
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+
 import { 
   getAuth, 
   signInWithEmailAndPassword, 
-  onAuthStateChanged 
+  onAuthStateChanged,
+  signOut
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+import { 
+  getDatabase, 
+  ref, 
+  get 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 /* 🔥 FIREBASE CONFIG */
 const firebaseConfig = {
   apiKey: "AIzaSyDsJUtZdIXcsB0w_2MQhMBXxIgbI3ijOvg",
-  authDomain: "incoinpaysliveearning.firebaseapp.com",
-  projectId: "incoinpaysliveearning",
-  storageBucket: "incoinpaysliveearning.firebasestorage.app",
-  messagingSenderId: "971873814750",
-  appId: "1:971873814750:web:7418c7da119e4725ed9a4f"
+  databaseURL: "https://incoinpaysliveearning-default-rtdb.firebaseio.com",
+  projectId: "incoinpaysliveearning"
 };
 
-/* INIT */
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const db = getDatabase(app);
 
-/* 🔑 LOGIN */
-window.login = ()=>{
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-  const msg = document.getElementById("msg");
+const msg = document.getElementById("msg");
+
+/* 🔄 AUTO REDIRECT IF ALREADY LOGGED IN */
+onAuthStateChanged(auth, async (user)=>{
+  if(user){
+    const snap = await get(ref(db,"admins/"+user.uid));
+    if(snap.exists()){
+      window.location.href="admin-dashboard.html";
+    }else{
+      await signOut(auth);
+    }
+  }
+});
+
+/* 🔐 LOGIN FUNCTION */
+window.login = async ()=>{
+
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
 
   if(!email || !password){
-    msg.innerHTML = "❌ Email & Password required";
-    msg.style.color = "red";
+    msg.innerText="❌ Fill all fields";
+    msg.style.color="red";
     return;
   }
 
-  signInWithEmailAndPassword(auth,email,password)
-    .then(()=>{
-      msg.innerHTML = "✅ Login successful";
-      msg.style.color = "#22c55e";
-      setTimeout(()=>{
-        window.location.href = "index.html";
-      },800);
-    })
-    .catch(err=>{
-      msg.innerHTML = "❌ " + err.message;
-      msg.style.color = "red";
-    });
-};
+  try{
 
-/* 🔒 AUTO REDIRECT IF LOGGED IN */
-onAuthStateChanged(auth,user=>{
-  if(user){
-    window.location.href = "admin.html";
+    const userCred = await signInWithEmailAndPassword(auth,email,password);
+    const uid = userCred.user.uid;
+
+    const roleSnap = await get(ref(db,"admins/"+uid));
+
+    if(!roleSnap.exists()){
+      await signOut(auth);
+      msg.innerText="⛔ Not Authorized";
+      msg.style.color="red";
+      return;
+    }
+
+    msg.innerText="✅ Login Successful";
+    msg.style.color="#22c55e";
+
+    setTimeout(()=>{
+      window.location.href="admin-dashboard.html";
+    },1000);
+
+  }catch(error){
+
+    let errorMessage="Login Failed";
+
+    if(error.code==="auth/user-not-found")
+      errorMessage="❌ Admin not found";
+
+    if(error.code==="auth/wrong-password")
+      errorMessage="❌ Wrong password";
+
+    if(error.code==="auth/invalid-email")
+      errorMessage="❌ Invalid email";
+
+    msg.innerText=errorMessage;
+    msg.style.color="red";
   }
-});
+
+};
 
 </script>
 

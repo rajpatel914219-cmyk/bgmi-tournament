@@ -1,78 +1,136 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>BGMI Tournament</title>
+<meta charset="UTF-8">
+<title>BGMI Tournament Room</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
+*{
+  box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
+}
+
 body{
-  background:#020617;
-  color:white;
-  font-family:Arial;
-}
-.box{
-  width:380px;
-  margin:20px auto;
-  background:#0f172a;
+  margin:0;
+  min-height:100vh;
+  background:radial-gradient(circle at top,#0b1220,#020617);
+  font-family:Arial, sans-serif;
+  display:flex;
+  justify-content:center;
+  align-items:center;
   padding:15px;
-  border-radius:10px;
+  color:white;
 }
-h2,h3{text-align:center}
-.stat{
-  background:#1e293b;
-  padding:10px;
-  border-radius:6px;
-  margin:8px 0;
-  text-align:center;
-}
-table{
+
+.card{
   width:100%;
-  border-collapse:collapse;
+  max-width:420px;
+  background:linear-gradient(180deg,#0f172a,#020617);
+  border-radius:18px;
+  padding:20px;
+  box-shadow:0 0 30px rgba(34,197,94,.2),
+             inset 0 0 15px rgba(0,0,0,.6);
 }
-td,th{
-  border:1px solid #334155;
-  padding:6px;
+
+.title{
   text-align:center;
+  font-size:18px;
+  font-weight:bold;
+  color:#22c55e;
+  margin-bottom:15px;
 }
-.top1{background:#facc15;color:black}
-.top2{background:#94a3b8;color:black}
-.top3{background:#cd7f32;color:black}
+
+.section{
+  background:#1e293b;
+  padding:12px;
+  border-radius:10px;
+  margin-top:12px;
+}
+
+.label{
+  font-size:13px;
+  color:#94a3b8;
+}
+
+.value{
+  font-size:16px;
+  font-weight:bold;
+  margin-top:5px;
+}
+
+.status{
+  text-align:center;
+  margin-top:10px;
+  font-weight:bold;
+}
+
+.countdown{
+  text-align:center;
+  margin-top:10px;
+  font-size:14px;
+  color:#facc15;
+}
+
+button{
+  width:100%;
+  padding:14px;
+  margin-top:15px;
+  border:none;
+  border-radius:12px;
+  font-size:15px;
+  font-weight:bold;
+  cursor:pointer;
+  background:linear-gradient(135deg,#22c55e,#16a34a);
+  color:white;
+}
+
+.rules{
+  font-size:13px;
+  margin-top:10px;
+  color:#cbd5e1;
+}
 </style>
 </head>
 
 <body>
 
-<div class="box">
-  <h2>🔥 BGMI Tournament</h2>
+<div class="card">
 
-  <div class="stat">
-    ⏳ Match Starts In:
-    <span id="timer">--</span>
+  <div class="title">🎮 MATCH ROOM DETAILS</div>
+
+  <div class="section">
+    <div class="label">Room ID</div>
+    <div class="value" id="roomId">Loading...</div>
   </div>
 
-  <div class="stat">
-    👥 Players Joined:
-    <span id="players">0</span>
+  <div class="section">
+    <div class="label">Password</div>
+    <div class="value" id="roomPass">Loading...</div>
   </div>
 
-  <h3>🏆 Player List</h3>
+  <div class="status" id="matchStatus">Checking Status...</div>
+  <div class="countdown" id="countdown"></div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>Name</th>
-        <th>BGMI ID</th>
-      </tr>
-    </thead>
-    <tbody id="leaderboard"></tbody>
-  </table>
+  <div class="section">
+    <div class="label">Match Rules</div>
+    <div class="rules">
+      • Emulator Not Allowed<br>
+      • Hacks = Permanent Ban<br>
+      • Follow Fair Play<br>
+      • Be On Time
+    </div>
+  </div>
+
+  <button onclick="goLeaderboard()">📊 View Live Leaderboard</button>
+
 </div>
 
 <!-- 🔥 FIREBASE -->
 <script type="module">
-import { initializeApp } from
+import { initializeApp } from 
 "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+
 import { getDatabase, ref, onValue }
 from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
@@ -85,55 +143,82 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-/* 👥 PLAYERS FROM BOOKINGS */
-const bookingsRef = ref(db,"bookings");
+/* 🔥 CHANGE MATCH ID HERE */
+const currentMatch = "match1";
 
-onValue(bookingsRef, snap=>{
-  const playersEl = document.getElementById("players");
-  const board = document.getElementById("leaderboard");
+const matchRef = ref(db, 
+`bgmiTournament/matches/${currentMatch}/info`);
 
-  board.innerHTML = "";
+const roomIdEl = document.getElementById("roomId");
+const roomPassEl = document.getElementById("roomPass");
+const statusEl = document.getElementById("matchStatus");
+const countdownEl = document.getElementById("countdown");
 
-  if(!snap.exists()){
-    playersEl.innerText = "0";
+/* 🔥 REALTIME LISTENER */
+onValue(matchRef, (snapshot)=>{
+
+  if(!snapshot.exists()){
+    statusEl.innerText = "Match Not Available";
+    statusEl.style.color = "red";
     return;
   }
 
-  const data = snap.val();
-  const list = Object.values(data);
+  const data = snapshot.val();
 
-  playersEl.innerText = list.length;
+  roomIdEl.innerText = data.roomId || "Not Released";
+  roomPassEl.innerText = data.password || "Not Released";
 
-  list.forEach((p,i)=>{
-    board.innerHTML += `
-      <tr>
-        <td>${i+1}</td>
-        <td>${p.name}</td>
-        <td>${p.bgmi}</td>
-      </tr>
-    `;
-  });
+  const status = data.status || "upcoming";
+
+  if(status === "upcoming"){
+    statusEl.innerText = "🟡 Upcoming Match";
+    statusEl.style.color = "#facc15";
+  }
+
+  if(status === "live"){
+    statusEl.innerText = "🟢 Match Live Now";
+    statusEl.style.color = "#22c55e";
+  }
+
+  if(status === "completed"){
+    statusEl.innerText = "🔴 Match Completed";
+    statusEl.style.color = "red";
+  }
+
+  if(data.startTime){
+    startCountdown(data.startTime);
+  }
+
 });
 
-/* ⏳ MATCH TIMER (6:00 PM) */
-const MATCH_TIME = new Date();
-MATCH_TIME.setHours(18,0,0,0);
+/* ⏳ COUNTDOWN */
+function startCountdown(startTime){
 
-setInterval(()=>{
-  const now = Date.now();
-  const diff = MATCH_TIME - now;
+  const interval = setInterval(()=>{
 
-  const timer = document.getElementById("timer");
+    const now = Date.now();
+    const diff = startTime - now;
 
-  if(diff <= 0){
-    timer.innerText = "MATCH STARTED";
-    return;
-  }
+    if(diff <= 0){
+      countdownEl.innerText = "Match Started!";
+      clearInterval(interval);
+      return;
+    }
 
-  const m = Math.floor(diff/60000);
-  const s = Math.floor((diff%60000)/1000);
-  timer.innerText = `${m}m ${s}s`;
-},1000);
+    const mins = Math.floor(diff / 60000);
+    const secs = Math.floor((diff % 60000) / 1000);
+
+    countdownEl.innerText =
+      `Starts In: ${mins}m ${secs}s`;
+
+  },1000);
+}
+
+/* 🔗 NAVIGATION */
+window.goLeaderboard = ()=>{
+  window.location.href = "leaderboard.html";
+};
+
 </script>
 
 </body>

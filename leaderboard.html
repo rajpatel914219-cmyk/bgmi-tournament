@@ -1,62 +1,106 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>BGMI Leaderboard</title>
+<title>BGMI Live Leaderboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
+*{
+  box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
+}
+
 body{
-  background:#020617;
-  font-family:Arial;
+  margin:0;
+  min-height:100vh;
+  background:radial-gradient(circle at top,#0b1220,#020617);
+  font-family:Arial, sans-serif;
+  display:flex;
+  justify-content:center;
+  padding:15px;
   color:white;
 }
+
 .container{
-  max-width:720px;
-  margin:30px auto;
-  padding:15px;
-}
-h2{text-align:center;}
-
-select{
   width:100%;
-  padding:10px;
-  margin-bottom:20px;
-  border-radius:6px;
-  border:none;
+  max-width:500px;
+  background:linear-gradient(180deg,#0f172a,#020617);
+  border-radius:18px;
+  padding:20px;
+  box-shadow:0 0 30px rgba(34,197,94,.2),
+             inset 0 0 15px rgba(0,0,0,.6);
 }
 
-/* 🥇 TOP 3 CARDS */
-.top3{
-  display:flex;
-  gap:10px;
-  margin-bottom:20px;
-}
-.card{
-  flex:1;
-  padding:15px;
-  border-radius:10px;
+.title{
   text-align:center;
+  font-size:18px;
+  font-weight:bold;
+  color:#22c55e;
+  margin-bottom:15px;
 }
-.gold{ background:#ca8a04; }
-.silver{ background:#64748b; }
-.bronze{ background:#92400e; }
 
-/* TABLE */
+.status{
+  text-align:center;
+  margin-bottom:10px;
+  font-weight:bold;
+}
+
 table{
   width:100%;
   border-collapse:collapse;
+  margin-top:10px;
 }
-th,td{
+
+th, td{
   padding:10px;
   text-align:center;
-}
-th{
-  background:#1e293b;
-  color:#38bdf8;
-}
-tr{
   border-bottom:1px solid #1e293b;
+  font-size:13px;
+}
+
+th{
+  background:#16a34a;
+}
+
+.gold{
+  background:gold;
+  color:black;
+  font-weight:bold;
+}
+
+.silver{
+  background:silver;
+  color:black;
+  font-weight:bold;
+}
+
+.bronze{
+  background:#cd7f32;
+  color:black;
+  font-weight:bold;
+}
+
+.winner{
+  text-align:center;
+  margin-top:15px;
+  padding:10px;
+  border-radius:10px;
+  background:#22c55e;
+  color:black;
+  font-weight:bold;
+}
+
+button{
+  width:100%;
+  padding:12px;
+  margin-top:15px;
+  border:none;
+  border-radius:10px;
+  font-weight:bold;
+  cursor:pointer;
+  background:linear-gradient(135deg,#22c55e,#16a34a);
+  color:white;
 }
 </style>
 </head>
@@ -64,91 +108,142 @@ tr{
 <body>
 
 <div class="container">
-<h2>🏆 BGMI Leaderboard</h2>
 
-<select id="match" onchange="loadData()">
-  <option value="match1">Match 1</option>
-  <option value="match2">Match 2</option>
-  <option value="match3">Match 3</option>
-</select>
+  <div class="title">📊 LIVE LEADERBOARD</div>
+  <div class="status" id="matchStatus">Loading Match...</div>
 
-<div class="top3" id="top3"></div>
+  <table>
+    <thead>
+      <tr>
+        <th>Rank</th>
+        <th>Player</th>
+        <th>K</th>
+        <th>Pos</th>
+        <th>Total</th>
+      </tr>
+    </thead>
+    <tbody id="leaderboardBody">
+    </tbody>
+  </table>
 
-<table>
-<thead>
-<tr>
-  <th>Rank</th>
-  <th>Player</th>
-  <th>Kills</th>
-  <th>Points</th>
-</tr>
-</thead>
-<tbody id="list"></tbody>
-</table>
+  <div id="winnerBox"></div>
+
+  <button onclick="goHome()">🏠 Back To Home</button>
+
 </div>
 
 <script type="module">
-import { initializeApp } from
+import { initializeApp } from 
 "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+
 import { getDatabase, ref, onValue }
 from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-/* FIREBASE CONFIG */
 const firebaseConfig = {
   apiKey: "AIzaSyDsJUtZdIXcsB0w_2MQhMBXxIgbI3ijOvg",
-  authDomain: "incoinpaysliveearning.firebaseapp.com",
   databaseURL: "https://incoinpaysliveearning-default-rtdb.firebaseio.com",
-  projectId: "incoinpaysliveearning",
-  storageBucket: "incoinpaysliveearning.firebasestorage.app",
-  messagingSenderId: "971873814750",
-  appId: "1:971873814750:web:7418c7da119e4725ed9a4f"
+  projectId: "incoinpaysliveearning"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-window.loadData = ()=>{
-  const match = document.getElementById("match").value;
-  const list = document.getElementById("list");
-  const top3 = document.getElementById("top3");
+/* 🔥 CHANGE MATCH ID HERE */
+const currentMatch = "match1";
 
-  onValue(ref(db,"leaderboard/"+match),(snap)=>{
-    list.innerHTML="";
-    top3.innerHTML="";
+const resultsRef = ref(db,
+`bgmiTournament/matches/${currentMatch}/results`);
 
-    if(!snap.exists()){
-      list.innerHTML="<tr><td colspan='4'>No Data</td></tr>";
-      return;
-    }
+const infoRef = ref(db,
+`bgmiTournament/matches/${currentMatch}/info`);
 
-    const players = Object.values(snap.val())
-      .sort((a,b)=>b.points-a.points);
+const tableBody = document.getElementById("leaderboardBody");
+const statusEl = document.getElementById("matchStatus");
+const winnerBox = document.getElementById("winnerBox");
 
-    /* TOP 3 */
-    const colors=["gold","silver","bronze"];
-    players.slice(0,3).forEach((p,i)=>{
-      top3.innerHTML+=`
-        <div class="card ${colors[i]}">
-          <h3>#${i+1}</h3>
-          <p>${p.name}</p>
-          <b>${p.points} pts</b>
-        </div>`;
-    });
+/* 🔥 MATCH STATUS LISTENER */
+onValue(infoRef,(snap)=>{
+  if(!snap.exists()){
+    statusEl.innerText = "Match Not Found";
+    statusEl.style.color = "red";
+    return;
+  }
 
-    /* TABLE */
-    players.forEach((p,i)=>{
-      list.innerHTML+=`
-      <tr>
-        <td>#${i+1}</td>
-        <td>${p.name}</td>
+  const status = snap.val().status || "upcoming";
+
+  if(status === "upcoming"){
+    statusEl.innerText = "🟡 Upcoming Match";
+    statusEl.style.color = "#facc15";
+  }
+
+  if(status === "live"){
+    statusEl.innerText = "🟢 Match Live";
+    statusEl.style.color = "#22c55e";
+  }
+
+  if(status === "completed"){
+    statusEl.innerText = "🔴 Match Completed";
+    statusEl.style.color = "red";
+  }
+});
+
+/* 🔥 LIVE LEADERBOARD */
+onValue(resultsRef,(snapshot)=>{
+
+  tableBody.innerHTML = "";
+  winnerBox.innerHTML = "";
+
+  if(!snapshot.exists()){
+    tableBody.innerHTML =
+      "<tr><td colspan='5'>No Players Yet</td></tr>";
+    return;
+  }
+
+  const players = Object.entries(snapshot.val())
+    .map(([uid,val])=>({
+      uid,
+      kills:val.kills || 0,
+      position:val.position || 0,
+      totalPoints:val.totalPoints || 0
+    }));
+
+  players.sort((a,b)=> b.totalPoints - a.totalPoints);
+
+  players.forEach((p,index)=>{
+
+    let cls="";
+    if(index===0) cls="gold";
+    if(index===1) cls="silver";
+    if(index===2) cls="bronze";
+
+    tableBody.innerHTML += `
+      <tr class="${cls}">
+        <td>${index+1}</td>
+        <td>${p.uid}</td>
         <td>${p.kills}</td>
-        <td>${p.points}</td>
-      </tr>`;
-    });
+        <td>${p.position}</td>
+        <td>${p.totalPoints}</td>
+      </tr>
+    `;
   });
+
+  /* 🏆 AUTO WINNER DECLARE */
+  if(players.length > 0){
+    winnerBox.innerHTML = `
+      <div class="winner">
+        🏆 Winner: ${players[0].uid} 
+        (${players[0].totalPoints} Points)
+      </div>
+    `;
+  }
+
+});
+
+/* 🔗 NAVIGATION */
+window.goHome = ()=>{
+  window.location.href = "index.html";
 };
 
-loadData();
 </script>
 
 </body>

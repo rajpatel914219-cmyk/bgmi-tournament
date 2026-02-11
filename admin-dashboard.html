@@ -1,147 +1,132 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>Admin Access Key Generator</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BGMI Admin Panel</title>
 
 <style>
 body{
   background:#020617;
   font-family:Arial;
   color:white;
+  margin:0;
 }
+
+.topbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:15px 20px;
+}
+
+.logout-btn{
+  background:#ef4444;
+  border:none;
+  padding:8px 14px;
+  border-radius:8px;
+  color:white;
+  cursor:pointer;
+  font-weight:bold;
+}
+
+.logout-btn:hover{
+  opacity:.85;
+}
+
 .box{
-  max-width:420px;
-  margin:80px auto;
+  width:420px;
+  margin:20px auto;
   background:#0f172a;
-  padding:25px;
-  border-radius:14px;
-}
-h2{
+  padding:20px;
+  border-radius:12px;
   text-align:center;
+}
+
+h2{
   margin-bottom:20px;
 }
-input,select,button{
-  width:100%;
-  padding:14px;
-  margin:10px 0;
-  border:none;
-  border-radius:8px;
-}
-input,select{
-  background:#020617;
-  color:white;
-}
-button{
-  background:#22c55e;
-  font-weight:bold;
-  cursor:pointer;
-}
-.key-box{
+
+.card{
   background:#020617;
   padding:15px;
+  margin:12px 0;
   border-radius:10px;
-  text-align:center;
-  font-size:18px;
-  letter-spacing:2px;
-  margin-top:10px;
-  border:1px dashed #22c55e;
+  cursor:pointer;
+  transition:0.3s;
 }
-.msg{
-  text-align:center;
-  margin-top:10px;
+
+.card:hover{
+  background:#1e293b;
 }
-.logout{
-  background:#ef4444;
-  margin-top:10px;
+
+.card span{
+  display:block;
+  font-size:14px;
+  opacity:0.8;
 }
 </style>
 </head>
 
 <body>
 
-<div class="box">
-  <h2>🔑 Generate Access Key</h2>
-
-  <select id="duration">
-    <option value="1">1 Hour</option>
-    <option value="3" selected>3 Hours</option>
-    <option value="6">6 Hours</option>
-    <option value="12">12 Hours</option>
-  </select>
-
-  <button onclick="generate()">Generate Key</button>
-
-  <div id="keyBox" class="key-box" style="display:none;"></div>
-
-  <button class="logout" onclick="logout()">Logout</button>
-
-  <p class="msg" id="msg"></p>
+<!-- 🔝 TOP BAR -->
+<div class="topbar">
+  <div style="font-size:18px;font-weight:bold;color:#22c55e;">
+    BGMI ADMIN PANEL
+  </div>
+  <button class="logout-btn" onclick="logout()">Logout</button>
 </div>
 
-<!-- 🔥 FIREBASE -->
-<script type="module">
-import { initializeApp } from
-"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, set }
-from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-import { getAuth, onAuthStateChanged, signOut }
-from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+<div class="box">
 
-/* 🔑 FIREBASE CONFIG */
-const firebaseConfig = {
-  apiKey: "AIzaSyDsJUtZdIXcsB0w_2MQhMBXxIgbI3ijOvg",
-  authDomain: "incoinpaysliveearning.firebaseapp.com",
-  databaseURL: "https://incoinpaysliveearning-default-rtdb.firebaseio.com",
-  projectId: "incoinpaysliveearning",
-  storageBucket: "incoinpaysliveearning.firebasestorage.app",
-  messagingSenderId: "971873814750",
-  appId: "1:971873814750:web:7418c7da119e4725ed9a4f"
-};
+  <div class="card" onclick="openPage('admin-accesskey.html')">
+    🔑 Access Key & Slots
+    <span>Create key • Set price • 3h expiry</span>
+  </div>
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-const auth = getAuth(app);
+  <div class="card" onclick="openPage('admin-bookslot-list.html')">
+    📋 Booked Slot List
+    <span>View all player bookings</span>
+  </div>
 
-/* 🔒 ADMIN PROTECTION */
-onAuthStateChanged(auth,user=>{
-  if(!user){
-    window.location.href="login.html";
+  <div class="card" onclick="openPage('admin-leaderboard.html')">
+    🏆 Kill Points Leaderboard
+    <span>Update & manage kills</span>
+  </div>
+
+  <div class="card" onclick="openPage('roomid.html')">
+    🎮 Room ID & Password
+    <span>Send room details to players</span>
+  </div>
+
+</div>
+
+<script>
+
+/* 🔐 AUTO LOGOUT AFTER 7 DAYS */
+const MAX_DAYS = 7;
+const now = Date.now();
+
+let loginTime = localStorage.getItem("admin_login_time");
+
+if(!loginTime){
+  localStorage.setItem("admin_login_time", now);
+}else{
+  const daysPassed = (now - loginTime) / (1000 * 60 * 60 * 24);
+  if(daysPassed >= MAX_DAYS){
+    logout();
   }
-});
-
-/* 🔐 RANDOM KEY GENERATOR */
-function randomKey(){
-  return "BGMI-" + Math.random().toString(36).substring(2,8).toUpperCase();
 }
 
-/* 🚀 GENERATE & SAVE KEY */
-window.generate = async ()=>{
-  const hours = Number(document.getElementById("duration").value);
-  const key = randomKey();
-  const expireAt = Date.now() + (hours * 60 * 60 * 1000);
+/* 🔓 LOGOUT FUNCTION */
+function logout(){
+  localStorage.removeItem("admin_login_time");
+  alert("Logged out successfully");
+  window.location.href = "../index.html";  // change if needed
+}
 
-  await set(ref(db,"accessKeys/"+key),{
-    expireAt: expireAt,
-    createdAt: Date.now(),
-    active: true
-  });
-
-  document.getElementById("keyBox").style.display="block";
-  document.getElementById("keyBox").innerHTML = key;
-
-  const msg = document.getElementById("msg");
-  msg.innerHTML = `✅ Key valid for ${hours} hour(s)`;
-  msg.style.color = "#22c55e";
-};
-
-/* 🚪 LOGOUT */
-window.logout = ()=>{
-  signOut(auth).then(()=>{
-    window.location.href="login.html";
-  });
-};
+function openPage(page){
+  window.location.href = page;
+}
 </script>
 
 </body>

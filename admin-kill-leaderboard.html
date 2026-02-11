@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ADMIN - Kill Point Manager</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body{
+  margin:0;
+  font-family:Arial, sans-serif;
+  background:#0f172a;
+  color:white;
+  padding:20px;
+}
+
+h2{
+  text-align:center;
+  color:#22c55e;
+}
+
+.card{
+  background:#1e293b;
+  padding:15px;
+  border-radius:10px;
+  margin-bottom:20px;
+}
+
+input, select, button{
+  width:100%;
+  padding:10px;
+  margin-top:8px;
+  border:none;
+  border-radius:6px;
+}
+
+button{
+  background:#16a34a;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:20px;
+}
+
+th, td{
+  padding:10px;
+  border-bottom:1px solid #334155;
+  text-align:center;
+}
+
+th{
+  background:#16a34a;
+}
+
+.gold{background:gold;color:black;}
+.silver{background:silver;color:black;}
+.bronze{background:#cd7f32;color:black;}
+
+.msg{
+  margin-top:10px;
+  font-weight:bold;
+}
+</style>
+</head>
+
+<body>
+
+<h2>🎮 ADMIN - KILL POINT MANAGER</h2>
+
+<div class="card">
+  <label>Create / Select Match</label>
+  <input id="matchId" placeholder="Enter Match ID (e.g. match1)">
+  <button onclick="createMatch()">Create / Load Match</button>
+</div>
+
+<div class="card">
+  <label>Player UID</label>
+  <input id="playerUid" placeholder="Enter Player UID">
+
+  <label>Kills</label>
+  <input id="kills" type="number" placeholder="Enter Kills">
+
+  <label>Position</label>
+  <input id="position" type="number" placeholder="Enter Position">
+
+  <button onclick="saveData()">Save / Update Player</button>
+
+  <div class="msg" id="msg"></div>
+</div>
+
+<h3>📊 Live Leaderboard</h3>
+
+<table>
+<thead>
+<tr>
+<th>Rank</th>
+<th>UID</th>
+<th>Kills</th>
+<th>Position</th>
+<th>Total Points</th>
+</tr>
+</thead>
+<tbody id="leaderboardBody"></tbody>
+</table>
+
+
+<script type="module">
+import { initializeApp } from 
+"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+
+import { getDatabase, ref, set, update, onValue, get }
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDsJUtZdIXcsB0w_2MQhMBXxIgbI3ijOvg",
+  databaseURL: "https://incoinpaysliveearning-default-rtdb.firebaseio.com",
+  projectId: "incoinpaysliveearning"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+let currentMatch = "";
+const msg = document.getElementById("msg");
+const tableBody = document.getElementById("leaderboardBody");
+
+/* 🏆 Position Points Logic */
+function getPositionPoints(pos){
+  const map = {
+    1:15, 2:12, 3:10, 4:8, 5:6,
+    6:4, 7:2, 8:1
+  };
+  return map[pos] || 0;
+}
+
+/* 📂 CREATE / LOAD MATCH */
+window.createMatch = async ()=>{
+  const id = document.getElementById("matchId").value.trim();
+
+  if(!id){
+    alert("Enter Match ID");
+    return;
+  }
+
+  currentMatch = id;
+
+  await set(ref(db,"bgmiTournament/matches/"+id+"/info"),{
+    createdAt: Date.now()
+  });
+
+  msg.innerText = "✅ Match Loaded";
+  msg.style.color = "#22c55e";
+
+  loadLeaderboard();
+};
+
+/* 💾 SAVE / UPDATE PLAYER */
+window.saveData = async ()=>{
+
+  if(!currentMatch){
+    alert("Create / Load Match First");
+    return;
+  }
+
+  const uid = document.getElementById("playerUid").value.trim();
+  const kills = parseInt(document.getElementById("kills").value);
+  const position = parseInt(document.getElementById("position").value);
+
+  if(!uid || isNaN(kills) || isNaN(position)){
+    msg.innerText = "❌ Fill All Fields";
+    msg.style.color = "red";
+    return;
+  }
+
+  const totalPoints = kills + getPositionPoints(position);
+
+  // 🔥 Anti-Duplicate (UID overwrite)
+  await update(ref(db,
+  `bgmiTournament/matches/${currentMatch}/results/${uid}`),{
+    kills,
+    position,
+    totalPoints,
+    updatedAt: Date.now()
+  });
+
+  msg.innerText = "✅ Player Updated";
+  msg.style.color = "#22c55e";
+};
+
+/* 📊 LIVE LEADERBOARD */
+function loadLeaderboard(){
+
+  const lbRef = ref(db,
+  `bgmiTournament/matches/${currentMatch}/results`);
+
+  onValue(lbRef,(snap)=>{
+
+    tableBody.innerHTML = "";
+
+    if(!snap.exists()){
+      tableBody.innerHTML =
+      "<tr><td colspan='5'>No Players</td></tr>";
+      return;
+    }
+
+    const players = Object.entries(snap.val()).map(([uid,val])=>({
+      uid,
+      ...val
+    }));
+
+    players.sort((a,b)=> b.totalPoints - a.totalPoints);
+
+    players.forEach((p,index)=>{
+
+      let cls="";
+      if(index===0) cls="gold";
+      if(index===1) cls="silver";
+      if(index===2) cls="bronze";
+
+      tableBody.innerHTML += `
+        <tr class="${cls}">
+          <td>${index+1}</td>
+          <td>${p.uid}</td>
+          <td>${p.kills}</td>
+          <td>${p.position}</td>
+          <td>${p.totalPoints}</td>
+        </tr>
+      `;
+    });
+
+  });
+}
+
+</script>
+
+</body>
+</html>

@@ -105,40 +105,42 @@ onAuthStateChanged(auth,user=>{
   }
 });
 
-/* 🔐 KEY GENERATOR */
+/* 🔐 RANDOM KEY */
 function randomKey(){
   return "BGMI-" + Math.random().toString(36).substr(2,6).toUpperCase();
 }
 
+/* 🔑 GENERATE KEY */
 window.generateKey = async ()=>{
   const hours = Number(duration.value);
   const key = randomKey();
 
   await set(ref(db,"accessKeys/"+key),{
     createdAt: Date.now(),
-    expireAt: Date.now() + hours*3600000,
-    used:false,
-    deviceId:null
+    expireAt: Date.now() + hours * 3600000,
+    used: false
   });
+
+  alert("✅ Key Generated:\n" + key);
 };
 
-/* 📋 KEY LIST + COPY + DELETE */
+/* 📋 LIST ALL KEYS */
 onValue(ref(db,"accessKeys"),snap=>{
-  const list=document.getElementById("list");
-  list.innerHTML="";
+  const list = document.getElementById("list");
+  list.innerHTML = "";
 
   snap.forEach(s=>{
-    const d=s.val();
+    const d = s.val();
     const expired = Date.now() > d.expireAt;
 
-    const div=document.createElement("div");
-    div.className=`key ${expired?"expired":"active"}`;
+    const div = document.createElement("div");
+    div.className = `key ${expired ? "expired" : "active"}`;
 
-    div.innerHTML=`
+    div.innerHTML = `
       <div class="key-info">
         <b>${s.key}</b><br>
-        ${expired?"⏳ Expired":"🟢 Active"} |
-        ${d.used?"🔐 Used":"🆓 Unused"}
+        ${expired ? "⏳ Expired" : "🟢 Active"} |
+        ${d.used ? "🔐 Used" : "🆓 Unused"}
       </div>
 
       <div class="actions">
@@ -147,14 +149,12 @@ onValue(ref(db,"accessKeys"),snap=>{
       </div>
     `;
 
-    /* COPY */
-    div.querySelector(".copy").onclick=()=>{
+    div.querySelector(".copy").onclick = ()=>{
       navigator.clipboard.writeText(s.key);
       alert("Key copied!");
     };
 
-    /* DELETE */
-    div.querySelector(".delete").onclick=()=>{
+    div.querySelector(".delete").onclick = ()=>{
       if(confirm("Delete this key?")){
         remove(ref(db,"accessKeys/"+s.key));
       }

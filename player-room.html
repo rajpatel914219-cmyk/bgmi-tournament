@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>BGMI Live Room</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body{
+  margin:0;
+  background:#000814;
+  font-family:Arial;
+  color:white;
+  overflow:hidden;
+}
+
+/* MAIN BOX */
+.container{
+  max-width:800px;
+  margin:40px auto;
+  padding:20px;
+  text-align:center;
+}
+
+/* ROOM CARD */
+.roomCard{
+  background:#0f172a;
+  padding:25px;
+  border-radius:16px;
+  box-shadow:0 0 20px rgba(0,255,255,.2);
+}
+
+.roomId{
+  font-size:30px;
+  font-weight:bold;
+  color:#22c55e;
+  margin:10px 0;
+}
+
+.roomPass{
+  font-size:22px;
+  color:#38bdf8;
+  margin-bottom:10px;
+}
+
+.locked{
+  color:red;
+  font-size:14px;
+}
+
+.unlocked{
+  color:#22c55e;
+  font-size:14px;
+}
+
+/* TIMER */
+.timer{
+  font-size:28px;
+  margin-top:20px;
+  color:#facc15;
+  font-weight:bold;
+}
+
+/* ANNOUNCE */
+.announce{
+  margin-top:20px;
+  padding:12px;
+  background:#1e293b;
+  border-radius:10px;
+  animation:blink 1.5s infinite;
+}
+
+@keyframes blink{
+  0%{opacity:1}
+  50%{opacity:.5}
+  100%{opacity:1}
+}
+
+/* STREAM OVERLAY MODE */
+.overlay{
+  position:fixed;
+  bottom:20px;
+  left:20px;
+  background:rgba(0,0,0,.7);
+  padding:12px 18px;
+  border-radius:10px;
+  font-size:14px;
+  border:1px solid #22c55e;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <div class="roomCard">
+    <h2>🎮 BGMI LIVE ROOM</h2>
+
+    <div id="lockStatus" class="locked">🔐 Room Locked</div>
+
+    <div class="roomId" id="roomId">----</div>
+    <div class="roomPass" id="roomPass">----</div>
+
+    <div class="timer" id="countdown">--:--</div>
+
+    <div class="announce" id="announceBox" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- 🎥 STREAM OVERLAY -->
+<div class="overlay" id="overlayBox">
+  Room: <span id="overlayId">----</span> |
+  Pass: <span id="overlayPass">----</span> |
+  Start In: <span id="overlayTimer">--:--</span>
+</div>
+
+<!-- 🔥 FIREBASE -->
+<script type="module">
+import { initializeApp } from
+"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, onValue }
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDsJUtZdIXcsB0w_2MQhMBXxIgbI3ijOvg",
+  databaseURL: "https://incoinpaysliveearning-default-rtdb.firebaseio.com",
+  projectId: "incoinpaysliveearning"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const roomIdEl = document.getElementById("roomId");
+const roomPassEl = document.getElementById("roomPass");
+const lockStatusEl = document.getElementById("lockStatus");
+const countdownEl = document.getElementById("countdown");
+const announceBox = document.getElementById("announceBox");
+
+const overlayId = document.getElementById("overlayId");
+const overlayPass = document.getElementById("overlayPass");
+const overlayTimer = document.getElementById("overlayTimer");
+
+/* 🔥 ROOM DATA */
+onValue(ref(db,"room"), snap=>{
+  if(!snap.exists()) return;
+
+  const d = snap.val();
+
+  if(d.locked){
+    lockStatusEl.innerText="🔐 Room Locked";
+    lockStatusEl.className="locked";
+    roomIdEl.innerText="Locked";
+    roomPassEl.innerText="Locked";
+    overlayId.innerText="Locked";
+    overlayPass.innerText="Locked";
+  }else{
+    lockStatusEl.innerText="🔓 Room Unlocked";
+    lockStatusEl.className="unlocked";
+    roomIdEl.innerText=d.roomId;
+    roomPassEl.innerText=d.roomPass;
+    overlayId.innerText=d.roomId;
+    overlayPass.innerText=d.roomPass;
+  }
+});
+
+/* 🔥 COUNTDOWN SYSTEM */
+let timerInterval;
+
+onValue(ref(db,"matchTimer"), snap=>{
+  if(!snap.exists()) return;
+
+  const endTime = snap.val().endTime;
+
+  clearInterval(timerInterval);
+
+  timerInterval = setInterval(()=>{
+    const now = Date.now();
+    const diff = endTime - now;
+
+    if(diff <= 0){
+      countdownEl.innerText="MATCH STARTED";
+      overlayTimer.innerText="LIVE";
+      clearInterval(timerInterval);
+      return;
+    }
+
+    const minutes = Math.floor(diff/60000);
+    const seconds = Math.floor((diff%60000)/1000);
+
+    const formatted =
+      String(minutes).padStart(2,'0') + ":" +
+      String(seconds).padStart(2,'0');
+
+    countdownEl.innerText=formatted;
+    overlayTimer.innerText=formatted;
+
+  },1000);
+});
+
+/* 🔥 ANNOUNCEMENT SYSTEM */
+onValue(ref(db,"announcement"), snap=>{
+  if(!snap.exists()){
+    announceBox.style.display="none";
+    return;
+  }
+
+  announceBox.style.display="block";
+  announceBox.innerText="📢 " + snap.val().message;
+});
+</script>
+
+</body>
+</html>

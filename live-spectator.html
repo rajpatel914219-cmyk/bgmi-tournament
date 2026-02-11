@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Live Spectator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  background:linear-gradient(180deg,#020617,#0f172a);
+  color:white;
+  padding:10px;
+}
+
+.container{
+  max-width:800px;
+  margin:auto;
+}
+
+h2{
+  text-align:center;
+  color:#22c55e;
+  margin-bottom:10px;
+}
+
+.live-badge{
+  text-align:center;
+  background:#22c55e;
+  padding:5px;
+  border-radius:20px;
+  margin-bottom:15px;
+  animation:pulse 1.5s infinite;
+}
+
+@keyframes pulse{
+  0%{opacity:1}
+  50%{opacity:.5}
+  100%{opacity:1}
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+
+th,td{
+  padding:12px;
+  text-align:center;
+}
+
+th{
+  background:#16a34a;
+}
+
+tr{
+  transition:all .4s ease;
+}
+
+tr:hover{
+  transform:scale(1.02);
+}
+
+.gold{background:#facc15;color:black;font-weight:bold}
+.silver{background:#cbd5e1;color:black;font-weight:bold}
+.bronze{background:#fb923c;color:black;font-weight:bold}
+
+.fade-in{
+  animation:fade .5s ease-in;
+}
+
+@keyframes fade{
+  from{opacity:0;transform:translateY(10px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+.winner{
+  text-align:center;
+  margin-top:15px;
+  font-size:18px;
+  color:#22c55e;
+  font-weight:bold;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>🎥 LIVE MATCH LEADERBOARD</h2>
+
+<div class="live-badge">🔴 LIVE</div>
+
+<table>
+<thead>
+<tr>
+<th>Rank</th>
+<th>Player</th>
+<th>Kills</th>
+<th>Points</th>
+</tr>
+</thead>
+<tbody id="board"></tbody>
+</table>
+
+<div class="winner" id="winnerBox"></div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from 
+"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+
+import { getDatabase, ref, onValue }
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDsJUtZdIXcsB0w_2MQhMBXxIgbI3ijOvg",
+  databaseURL: "https://incoinpaysliveearning-default-rtdb.firebaseio.com",
+  projectId: "incoinpaysliveearning"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const board = document.getElementById("board");
+const winnerBox = document.getElementById("winnerBox");
+
+const matchName = localStorage.getItem("selectedMatch") || "Match 1";
+
+onValue(ref(db,"matchData/"+matchName),(snapshot)=>{
+
+  board.innerHTML="";
+
+  if(!snapshot.exists()){
+    board.innerHTML="<tr><td colspan='4'>No Data</td></tr>";
+    return;
+  }
+
+  const data = snapshot.val();
+
+  const players = Object.keys(data).map(key=>{
+    return {
+      name:data[key].name,
+      kills:data[key].kills || 0,
+      points:data[key].points || 0
+    }
+  });
+
+  players.sort((a,b)=> b.points - a.points);
+
+  players.forEach((player,index)=>{
+
+    let cls="";
+    if(index===0) cls="gold";
+    if(index===1) cls="silver";
+    if(index===2) cls="bronze";
+
+    board.innerHTML+=`
+      <tr class="${cls} fade-in">
+        <td>${index+1}</td>
+        <td>${player.name}</td>
+        <td>${player.kills}</td>
+        <td>${player.points}</td>
+      </tr>
+    `;
+  });
+
+  // Winner Declaration (if match completed)
+  if(players.length>0){
+    winnerBox.innerHTML = `🏆 Leading: ${players[0].name}`;
+  }
+
+});
+</script>
+
+</body>
+</html>

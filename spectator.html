@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>BGMI Spectator - Grand Total</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+
+body{
+  font-family:Arial, sans-serif;
+  background:radial-gradient(circle at top,#0f172a,#020617);
+  color:white;
+  display:flex;
+  justify-content:center;
+  padding:15px;
+  min-height:100vh;
+}
+
+.container{
+  width:100%;
+  max-width:500px;
+  background:linear-gradient(180deg,#0b1220,#020617);
+  border-radius:20px;
+  padding:20px;
+  box-shadow:0 0 40px rgba(34,197,94,.25);
+}
+
+.title{
+  text-align:center;
+  font-weight:bold;
+  font-size:20px;
+  color:#22c55e;
+  margin-bottom:15px;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:10px;
+}
+
+th,td{
+  padding:10px;
+  text-align:center;
+  border-bottom:1px solid #1e293b;
+  font-size:13px;
+}
+
+th{
+  background:#16a34a;
+}
+
+.gold{background:gold;color:black;font-weight:bold;}
+.silver{background:silver;color:black;font-weight:bold;}
+.bronze{background:#cd7f32;color:black;font-weight:bold;}
+
+.crown{
+  font-size:16px;
+}
+
+.fadeIn{
+  animation:fade .5s ease-in-out;
+}
+
+@keyframes fade{
+  from{opacity:0;transform:translateY(5px);}
+  to{opacity:1;transform:translateY(0);}
+}
+
+.footer{
+  text-align:center;
+  margin-top:15px;
+  font-size:12px;
+  opacity:.7;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <div class="title">🏆 GRAND TOTAL LEADERBOARD</div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Rank</th>
+        <th>Player</th>
+        <th>Total Points</th>
+      </tr>
+    </thead>
+    <tbody id="leaderboardBody">
+      <tr><td colspan="3">Loading...</td></tr>
+    </tbody>
+  </table>
+
+  <div class="footer">
+    🎮 Live Spectator Mode
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from 
+"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+
+import { getDatabase, ref, onValue }
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+/* 🔥 YOUR FIREBASE CONFIG */
+const firebaseConfig = {
+  apiKey: "AIzaSyDsJUtZdIXcsB0w_2MQhMBXxIgbI3ijOvg",
+  databaseURL: "https://incoinpaysliveearning-default-rtdb.firebaseio.com",
+  projectId: "incoinpaysliveearning"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+/* 🔥 PATH TO ALL MATCHES */
+const matchesRef = ref(db,"bgmiTournament/matches");
+
+const tableBody = document.getElementById("leaderboardBody");
+
+/* 🔥 NUMBER ANIMATION */
+function animateValue(element,start,end,duration){
+  let startTime = null;
+
+  function animation(currentTime){
+    if(!startTime) startTime = currentTime;
+    const progress = Math.min((currentTime - startTime) / duration, 1);
+    element.innerText = Math.floor(progress*(end-start)+start);
+
+    if(progress < 1){
+      requestAnimationFrame(animation);
+    }
+  }
+  requestAnimationFrame(animation);
+}
+
+/* 🔥 REALTIME GRAND TOTAL CALCULATION */
+onValue(matchesRef,(snapshot)=>{
+
+  tableBody.innerHTML="";
+
+  if(!snapshot.exists()){
+    tableBody.innerHTML =
+      "<tr><td colspan='3'>No Matches Yet</td></tr>";
+    return;
+  }
+
+  const matches = snapshot.val();
+  const grandTotals = {};
+
+  /* 🔥 LOOP ALL MATCHES */
+  Object.keys(matches).forEach(matchId=>{
+
+    const results = matches[matchId].results;
+    if(!results) return;
+
+    Object.keys(results).forEach(player=>{
+
+      const points = results[player].totalPoints || 0;
+
+      if(!grandTotals[player]){
+        grandTotals[player]=0;
+      }
+
+      grandTotals[player]+=points;
+
+    });
+
+  });
+
+  const sortedPlayers = Object.entries(grandTotals)
+    .map(([name,total])=>({name,total}))
+    .sort((a,b)=>b.total-a.total);
+
+  if(sortedPlayers.length===0){
+    tableBody.innerHTML =
+      "<tr><td colspan='3'>No Results Found</td></tr>";
+    return;
+  }
+
+  sortedPlayers.forEach((player,index)=>{
+
+    let cls="";
+    let crown="";
+
+    if(index===0){cls="gold";crown=" 👑";}
+    if(index===1)cls="silver";
+    if(index===2)cls="bronze";
+
+    const row=document.createElement("tr");
+    row.className=cls+" fadeIn";
+
+    row.innerHTML=`
+      <td>${index+1}</td>
+      <td>${player.name}${crown}</td>
+      <td id="points-${index}">0</td>
+    `;
+
+    tableBody.appendChild(row);
+
+    const pointCell=document.getElementById(`points-${index}`);
+    animateValue(pointCell,0,player.total,700);
+
+  });
+
+});
+</script>
+
+</body>
+</html>

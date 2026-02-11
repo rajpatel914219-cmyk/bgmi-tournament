@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>BGMI Team Registration</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+*{
+  box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
+}
+
+body{
+  margin:0;
+  min-height:100vh;
+  background:radial-gradient(circle at top,#0b1220,#020617);
+  font-family:Arial, sans-serif;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding:15px;
+  color:white;
+}
+
+.card{
+  width:100%;
+  max-width:420px;
+  background:linear-gradient(180deg,#0f172a,#020617);
+  border-radius:18px;
+  padding:22px;
+  box-shadow:0 0 30px rgba(34,197,94,.2),
+             inset 0 0 15px rgba(0,0,0,.6);
+}
+
+.title{
+  text-align:center;
+  font-size:18px;
+  color:#22c55e;
+  font-weight:bold;
+  margin-bottom:15px;
+}
+
+input, button{
+  width:100%;
+  padding:14px;
+  margin:8px 0;
+  border:none;
+  border-radius:12px;
+  font-size:15px;
+}
+
+input{
+  background:#020617;
+  color:white;
+}
+
+button{
+  background:linear-gradient(135deg,#22c55e,#16a34a);
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.hidden{
+  display:none;
+}
+
+.counter{
+  text-align:center;
+  margin-bottom:8px;
+  font-size:14px;
+  color:#38bdf8;
+}
+
+#msg{
+  text-align:center;
+  font-weight:bold;
+  margin-top:10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+
+  <div class="title">🎮 BGMI TEAM REGISTRATION</div>
+
+  <!-- KEY SECTION -->
+  <div id="keySection">
+    <input id="accessKey" placeholder="Enter Team Access Key">
+    <button onclick="verifyKey()">ENTER TEAM</button>
+  </div>
+
+  <!-- TEAM SECTION -->
+  <div id="bookingSection" class="hidden">
+
+    <div class="counter">
+      Players Added: <span id="playerCount">0</span>/4
+    </div>
+
+    <!-- TEAM NAME (ONLY FIRST TIME REQUIRED) -->
+    <input id="teamName" placeholder="TEAM NAME"
+      oninput="this.value=this.value.toUpperCase()">
+
+    <input id="playerName" placeholder="PLAYER NAME"
+      oninput="this.value=this.value.toUpperCase()">
+
+    <input id="bgmiId" placeholder="BGMI ID">
+
+    <button onclick="addPlayer()">ADD PLAYER</button>
+  </div>
+
+  <div id="msg"></div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from 
+"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+
+import { getDatabase, ref, get, push, update, query, orderByChild, equalTo }
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+/* FIREBASE CONFIG */
+const firebaseConfig = {
+  apiKey: "AIzaSyDsJUtZdIXcsB0w_2MQhMBXxIgbI3ijOvg",
+  databaseURL: "https://incoinpaysliveearning-default-rtdb.firebaseio.com",
+  projectId: "incoinpaysliveearning"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const msg = document.getElementById("msg");
+const keySection = document.getElementById("keySection");
+const bookingSection = document.getElementById("bookingSection");
+const playerCountEl = document.getElementById("playerCount");
+const teamNameInput = document.getElementById("teamName");
+
+let currentKey = "";
+let currentCount = 0;
+let savedTeamName = "";
+
+/* VERIFY KEY */
+window.verifyKey = async ()=>{
+  const key = accessKey.value.trim();
+  if(!key) return showMsg("❌ Enter access key","red");
+
+  const snap = await get(ref(db,"accessKeys/"+key));
+  if(!snap.exists()) return showMsg("❌ Invalid Key","red");
+
+  const data = snap.val();
+  if(Date.now() > data.expireAt)
+    return showMsg("⏳ Key expired","red");
+
+  currentKey = key;
+
+  await loadExistingTeam();
+
+  keySection.classList.add("hidden");
+  bookingSection.classList.remove("hidden");
+
+  showMsg("✅ Team Lobby Active","#22c55e");
+};
+
+/* LOAD EXISTING TEAM */
+async function loadExistingTeam(){
+  const snap = await get(ref(db,"bookings"));
+  currentCount = 0;
+  savedTeamName = "";
+
+  if(snap.exists()){
+    snap.forEach(child=>{
+      const d = child.val();
+      if(d.accessKey === currentKey){
+        currentCount++;
+        savedTeamName = d.teamName;
+      }
+    });
+  }
+
+  if(savedTeamName){
+    teamNameInput.value = savedTeamName;
+    teamNameInput.disabled = true;
+  }
+
+  playerCountEl.innerText = currentCount;
+}
+
+/* ADD PLAYER */
+window.addPlayer = async ()=>{
+  const name = playerName.value.trim();
+  const bgmi = bgmiId.value.trim();
+  const teamName = teamNameInput.value.trim();
+
+  if(!name || !bgmi)
+    return showMsg("❌ Fill all details","red");
+
+  if(currentCount === 0 && !teamName)
+    return showMsg("❌ Enter Team Name","red");
+
+  if(currentCount >= 4)
+    return showMsg("⚠️ Team Full (4/4)","orange");
+
+  /* DUPLICATE BGMI CHECK */
+  const dupQuery = query(
+    ref(db,"bookings"),
+    orderByChild("bgmi"),
+    equalTo(bgmi)
+  );
+
+  const dupSnap = await get(dupQuery);
+  if(dupSnap.exists())
+    return showMsg("❌ BGMI already registered","red");
+
+  const isCaptain = currentCount === 0;
+
+  await push(ref(db,"bookings"),{
+    name,
+    bgmi,
+    teamName: teamName || savedTeamName,
+    accessKey: currentKey,
+    captain: isCaptain,
+    time: Date.now()
+  });
+
+  if(isCaptain){
+    savedTeamName = teamName;
+    teamNameInput.disabled = true;
+  }
+
+  currentCount++;
+  playerCountEl.innerText = currentCount;
+
+  showMsg(isCaptain ? "👑 Captain Added" : "✅ Player Added","#22c55e");
+
+  playerName.value="";
+  bgmiId.value="";
+
+  if(currentCount >= 4){
+    await update(ref(db,"accessKeys/"+currentKey),{
+      used:true
+    });
+    showMsg("🏆 Team Completed (4/4)","#22c55e");
+  }
+};
+
+function showMsg(text,color){
+  msg.innerText=text;
+  msg.style.color=color;
+}
+</script>
+
+</body>
+</html>

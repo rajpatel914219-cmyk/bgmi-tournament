@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ADMIN - Match Manager</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body{
+  margin:0;
+  font-family:Arial, sans-serif;
+  background:#0f172a;
+  color:white;
+  padding:20px;
+}
+
+h2{
+  text-align:center;
+  color:#22c55e;
+}
+
+.card{
+  background:#1e293b;
+  padding:15px;
+  border-radius:10px;
+  margin-bottom:20px;
+}
+
+input, button{
+  width:100%;
+  padding:10px;
+  margin-top:8px;
+  border:none;
+  border-radius:6px;
+}
+
+button{
+  background:#16a34a;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:20px;
+}
+
+th, td{
+  padding:10px;
+  border-bottom:1px solid #334155;
+  text-align:center;
+}
+
+th{
+  background:#16a34a;
+}
+
+.gold{background:gold;color:black;}
+.silver{background:silver;color:black;}
+.bronze{background:#cd7f32;color:black;}
+
+.msg{
+  margin-top:10px;
+  font-weight:bold;
+}
+</style>
+</head>
+
+<body>
+
+<h2>🎮 ADMIN - MATCH CONTROL PANEL</h2>
+
+<div class="card">
+  <label>Enter Match ID (Example: match1)</label>
+  <input id="matchId" placeholder="Enter Match ID">
+  <button onclick="createOrLoadMatch()">Create / Load Match</button>
+  <div class="msg" id="matchMsg"></div>
+</div>
+
+<div class="card">
+  <label>Player UID</label>
+  <input id="playerUid" placeholder="Enter Player UID">
+
+  <label>Kills</label>
+  <input id="kills" type="number" placeholder="Enter Kills">
+
+  <label>Position</label>
+  <input id="position" type="number" placeholder="Enter Position">
+
+  <button onclick="savePlayer()">Save / Update Player</button>
+  <div class="msg" id="playerMsg"></div>
+</div>
+
+<h3>📊 Live Leaderboard</h3>
+
+<table>
+<thead>
+<tr>
+<th>Rank</th>
+<th>UID</th>
+<th>Kills</th>
+<th>Position</th>
+<th>Total Points</th>
+</tr>
+</thead>
+<tbody id="leaderboardBody"></tbody>
+</table>
+
+<script type="module">
+import { initializeApp } from 
+"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+
+import { getDatabase, ref, set, update, get, onValue }
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDsJUtZdIXcsB0w_2MQhMBXxIgbI3ijOvg",
+  databaseURL: "https://incoinpaysliveearning-default-rtdb.firebaseio.com",
+  projectId: "incoinpaysliveearning"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+let currentMatch = "";
+const tableBody = document.getElementById("leaderboardBody");
+
+/* 🏆 Position Points */
+function getPositionPoints(pos){
+  const map = {
+    1:15, 2:12, 3:10, 4:8, 5:6,
+    6:4, 7:2, 8:1
+  };
+  return map[pos] || 0;
+}
+
+/* 🔥 CREATE OR LOAD MATCH */
+window.createOrLoadMatch = async ()=>{
+
+  const matchId = document.getElementById("matchId").value.trim();
+  const matchMsg = document.getElementById("matchMsg");
+
+  if(!matchId){
+    matchMsg.innerText = "❌ Enter Match ID";
+    matchMsg.style.color = "red";
+    return;
+  }
+
+  currentMatch = matchId;
+
+  const matchRef = ref(db, `bgmiTournament/matches/${matchId}`);
+
+  const snapshot = await get(matchRef);
+
+  if(!snapshot.exists()){
+    await set(matchRef,{
+      info:{
+        createdAt: Date.now(),
+        status:"active"
+      }
+    });
+
+    matchMsg.innerText = "✅ New Match Created";
+  } else {
+    matchMsg.innerText = "✅ Match Loaded";
+  }
+
+  matchMsg.style.color = "#22c55e";
+
+  loadLeaderboard();
+};
+
+/* 💾 SAVE PLAYER */
+window.savePlayer = async ()=>{
+
+  if(!currentMatch){
+    alert("Create or Load Match First");
+    return;
+  }
+
+  const uid = document.getElementById("playerUid").value.trim();
+  const kills = parseInt(document.getElementById("kills").value);
+  const position = parseInt(document.getElementById("position").value);
+  const playerMsg = document.getElementById("playerMsg");
+
+  if(!uid || isNaN(kills) || isNaN(position)){
+    playerMsg.innerText = "❌ Fill All Fields";
+    playerMsg.style.color = "red";
+    return;
+  }
+
+  const totalPoints = kills + getPositionPoints(position);
+
+  await update(ref(db,
+  `bgmiTournament/matches/${currentMatch}/results/${uid}`),{
+    kills,
+    position,
+    totalPoints,
+    updatedAt: Date.now()
+  });
+
+  playerMsg.innerText = "✅ Player Updated";
+  playerMsg.style.color = "#22c55e";
+};
+
+/* 📊 LIVE LEADERBOARD */
+function loadLeaderboard(){
+
+  const lbRef = ref(db,
+  `bgmiTournament/matches/${currentMatch}/results`
+  );
+
+  onValue(lbRef,(snap)=>{
+
+    tableBody.innerHTML = "";
+
+    if(!snap.exists()){
+      tableBody.innerHTML =
+      "<tr><td colspan='5'>No Players</td></tr>";
+      return;
+    }
+
+    const players = Object.entries(snap.val())
+      .map(([uid,val])=>({uid,...val}));
+
+    players.sort((a,b)=> b.totalPoints - a.totalPoints);
+
+    players.forEach((p,index)=>{
+
+      let cls="";
+      if(index===0) cls="gold";
+      if(index===1) cls="silver";
+      if(index===2) cls="bronze";
+
+      tableBody.innerHTML += `
+        <tr class="${cls}">
+          <td>${index+1}</td>
+          <td>${p.uid}</td>
+          <td>${p.kills}</td>
+          <td>${p.position}</td>
+          <td>${p.totalPoints}</td>
+        </tr>
+      `;
+    });
+
+  });
+}
+
+</script>
+
+</body>
+</html>
