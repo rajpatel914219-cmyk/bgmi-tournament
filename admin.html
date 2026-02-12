@@ -2,59 +2,93 @@
 <html>
 <head>
 <title>BGMI Admin Panel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
+*{box-sizing:border-box;}
+
 body{
   background:#020617;
   font-family:Arial;
   color:white;
+  margin:0;
 }
+
+.topbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:15px;
+}
+
+.panel-title{
+  font-size:16px;
+  font-weight:bold;
+  color:#22c55e;
+}
+
+.logout-btn{
+  background:#ef4444;
+  border:none;
+  padding:7px 12px;
+  border-radius:8px;
+  color:white;
+  cursor:pointer;
+  font-size:13px;
+  font-weight:bold;
+}
+
 .box{
-  width:420px;
-  margin:40px auto;
+  width:100%;
+  max-width:400px;
+  margin:10px auto 30px auto;
   background:#0f172a;
-  padding:20px;
-  border-radius:12px;
-  text-align:center;
+  padding:18px;
+  border-radius:14px;
 }
-h2{
-  margin-bottom:20px;
-}
+
 .card{
   background:#020617;
-  padding:15px;
+  padding:14px;
   margin:12px 0;
-  border-radius:10px;
+  border-radius:12px;
   cursor:pointer;
-  transition:0.3s;
+  transition:.3s;
 }
+
 .card:hover{
   background:#1e293b;
 }
+
 .card span{
   display:block;
-  font-size:14px;
-  opacity:0.8;
+  font-size:12px;
+  opacity:.8;
+  margin-top:5px;
 }
 </style>
 </head>
 
 <body>
 
+<div class="topbar">
+  <div class="panel-title"></div>
+  <button class="logout-btn" onclick="logout()">Logout</button>
+</div>
+
 <div class="box">
-  <h2>BGMI ADMIN PANEL</h2>
 
   <div class="card" onclick="openPage('admin-accesskey.html')">
     🔑 Access Key & Slots
-    <span>Create key • Set price • 3h expiry</span>
+    <span>Create key • Manage expiry</span>
   </div>
 
-  <div class="card" onclick="openPage('bookslot-list.html')">
+  <div class="card" onclick="openPage('admin-bookslot-list.html')">
     📋 Booked Slot List
-    <span>View all player bookings</span>
+    <span>View all team registrations</span>
   </div>
 
-  <div class="card" onclick="openPage('leaderboard.html')">
+  <div class="card" onclick="openPage('admin-leaderboard.html')">
     🏆 Kill Points Leaderboard
     <span>Update & manage kills</span>
   </div>
@@ -63,9 +97,44 @@ h2{
     🎮 Room ID & Password
     <span>Send room details to players</span>
   </div>
+
 </div>
 
-<script>
+<script type="module">
+
+/* 🔥 FIREBASE IMPORT */
+import { initializeApp } from
+"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+
+import { getAuth, onAuthStateChanged, signOut }
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+import { getDatabase }
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+/* 🔥 FIREBASE CONFIG */
+const firebaseConfig = {
+  apiKey: "AIzaSyDsJUtZdIXcsB0w_2MQhMBXxIgbI3ijOvg",
+  authDomain: "incoinpaysliveearning.firebaseapp.com",
+  databaseURL: "https://incoinpaysliveearning-default-rtdb.firebaseio.com",
+  projectId: "incoinpaysliveearning",
+  storageBucket: "incoinpaysliveearning.appspot.com",
+  messagingSenderId: "1234567890",
+  appId: "1:1234567890:web:abcdef123456"
+};
+
+/* 🔥 INIT */
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+/* 🔐 AUTH CHECK */
+onAuthStateChanged(auth, user => {
+  if(!user){
+    window.location.href = "login.html";
+  }
+});
+
 /* 🔐 AUTO LOGOUT AFTER 7 DAYS */
 const MAX_DAYS = 7;
 const now = Date.now();
@@ -77,15 +146,23 @@ if(!loginTime){
 }else{
   const daysPassed = (now - loginTime) / (1000 * 60 * 60 * 24);
   if(daysPassed >= MAX_DAYS){
-    localStorage.removeItem("admin_login_time");
-    alert("Session expired. Please login again.");
-    window.location.href = "../index.html";
+    logout();
   }
 }
 
-function openPage(page){
+/* 🔓 LOGOUT */
+window.logout = async function(){
+  await signOut(auth);
+  localStorage.removeItem("admin_login_time");
+  alert("Logged out successfully");
+  window.location.href = "login.html";
+};
+
+/* 🔗 NAVIGATION */
+window.openPage = function(page){
   window.location.href = page;
-}
+};
+
 </script>
 
 </body>
