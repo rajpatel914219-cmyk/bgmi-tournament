@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Admin Control Panel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{background:#0f172a;color:white;font-family:Arial;padding:15px}
+.card{background:#1e293b;padding:15px;border-radius:10px;margin-bottom:15px}
+button{padding:8px 15px;border:none;border-radius:5px;margin-top:5px}
+</style>
+</head>
+<body>
+
+<h2>🔐 Admin Control Panel</h2>
+
+<div class="card">
+<h3>🎮 Match Control</h3>
+<button onclick="updateStatus('Upcoming')">Upcoming</button>
+<button onclick="updateStatus('Live')">Go Live</button>
+<button onclick="updateStatus('Closed')">Close Match</button>
+</div>
+
+<div class="card">
+<h3>📊 Update Player Result</h3>
+<input id="uid" placeholder="Player UID"><br><br>
+<input id="kills" type="number" placeholder="Kills"><br><br>
+<input id="position" type="number" placeholder="Position"><br><br>
+<button onclick="updateResult()">Submit Result</button>
+</div>
+
+<div class="card">
+<h3>🏆 Calculate Winner</h3>
+<button onclick="calculateWinner()">Auto Calculate Winner</button>
+</div>
+
+<script type="module">
+import { initializeApp } from 
+"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, update, get, set }
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDsJUtZdIXcsB0w_2MQhMBXxIgbI3ijOvg",
+  databaseURL: "https://incoinpaysliveearning-default-rtdb.firebaseio.com",
+  projectId: "incoinpaysliveearning"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+window.updateStatus = async(status)=>{
+  await update(ref(db,"tournament"),{status});
+  alert("Status Updated");
+};
+
+/* KILL + POSITION POINT SYSTEM */
+window.updateResult = async()=>{
+  const uid=document.getElementById("uid").value;
+  const kills=parseInt(document.getElementById("kills").value);
+  const position=parseInt(document.getElementById("position").value);
+
+  const killPoints=kills*10;
+  const positionPoints = 
+    position===1?50:
+    position===2?30:
+    position===3?20:10;
+
+  const totalPoints = killPoints+positionPoints;
+
+  await set(ref(db,"participants/solo/"+uid),{
+    kills,position,totalPoints
+  });
+
+  alert("Result Updated");
+};
+
+/* AUTO WINNER */
+window.calculateWinner = async()=>{
+  const snap=await get(ref(db,"participants/solo"));
+  let highest=0;
+  let winnerUID=null;
+
+  snap.forEach(child=>{
+    const data=child.val();
+    if(data.totalPoints>highest){
+      highest=data.totalPoints;
+      winnerUID=child.key;
+    }
+  });
+
+  await set(ref(db,"results/solo"),{
+    winnerUID,
+    points:highest
+  });
+
+  alert("Winner Calculated");
+};
+</script>
+</body>
+</html>

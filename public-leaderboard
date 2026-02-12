@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>BGMI LIVE LEADERBOARD</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  background:#0f172a;
+  color:white;
+  padding:20px;
+  text-align:center;
+}
+
+h2{color:#22c55e}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:20px;
+}
+
+th,td{
+  padding:10px;
+  border-bottom:1px solid #334155;
+}
+
+.gold{background:gold;color:black}
+.silver{background:silver;color:black}
+.bronze{background:#cd7f32;color:black}
+</style>
+</head>
+<body>
+
+<h2>🏆 GRAND LIVE LEADERBOARD</h2>
+
+<table>
+<thead>
+<tr>
+<th>Rank</th>
+<th>Player UID</th>
+<th>Total Points</th>
+</tr>
+</thead>
+<tbody id="board"></tbody>
+</table>
+
+<script type="module">
+import { initializeApp } from 
+"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+
+import { getDatabase, ref, onValue } 
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDsJUtZdIXcsB0w_2MQhMBXxIgbI3ijOvg",
+  databaseURL: "https://incoinpaysliveearning-default-rtdb.firebaseio.com",
+  projectId: "incoinpaysliveearning"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const grandRef = ref(db,"bgmiTournament/grandLeaderboard");
+
+onValue(grandRef,(snap)=>{
+  const tbody=document.getElementById("board");
+  tbody.innerHTML="";
+
+  if(!snap.exists()) return;
+
+  const data = Object.entries(snap.val()).map(([uid,val])=>({
+    uid,
+    totalPoints:val.totalPoints || 0
+  }));
+
+  data.sort((a,b)=>b.totalPoints-a.totalPoints);
+
+  data.forEach((p,i)=>{
+    let className="";
+    if(i===0) className="gold";
+    if(i===1) className="silver";
+    if(i===2) className="bronze";
+
+    tbody.innerHTML+=`
+      <tr class="${className}">
+        <td>${i+1}</td>
+        <td>${p.uid}</td>
+        <td>${p.totalPoints}</td>
+      </tr>
+    `;
+  });
+});
+</script>
+</body>
+</html>

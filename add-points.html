@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>BGMI Admin - Manage Points</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body{
+  font-family:Arial;
+  background:#0f172a;
+  color:white;
+  display:flex;
+  justify-content:center;
+  padding:15px;
+}
+
+.container{
+  width:100%;
+  max-width:500px;
+  background:#1e293b;
+  padding:20px;
+  border-radius:15px;
+  box-shadow:0 0 25px rgba(34,197,94,.3);
+}
+
+h2{
+  text-align:center;
+  color:#22c55e;
+  margin-bottom:15px;
+}
+
+input,select,button{
+  width:100%;
+  padding:10px;
+  margin-top:8px;
+  border:none;
+  border-radius:8px;
+  font-size:14px;
+}
+
+input,select{
+  background:#0f172a;
+  color:white;
+}
+
+button{
+  background:#22c55e;
+  color:black;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+button:hover{opacity:.85;}
+
+.player-box{
+  margin-top:20px;
+  max-height:300px;
+  overflow:auto;
+  background:#0f172a;
+  border-radius:10px;
+  padding:10px;
+}
+
+.player{
+  padding:8px;
+  margin-bottom:6px;
+  border-radius:8px;
+  font-size:13px;
+}
+
+.gold{background:gold;color:black;font-weight:bold;}
+.silver{background:silver;color:black;font-weight:bold;}
+.bronze{background:#cd7f32;color:black;font-weight:bold;}
+
+.action-btn{
+  margin-top:5px;
+  padding:4px 8px;
+  font-size:11px;
+  border-radius:5px;
+  cursor:pointer;
+}
+
+.edit{background:#3b82f6;color:white;border:none;}
+.delete{background:#ef4444;color:white;border:none;}
+
+.msg{
+  text-align:center;
+  margin-top:10px;
+}
+.success{color:#22c55e;}
+.error{color:red;}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>🏆 Manage Match Points</h2>
+
+<select id="matchSelect"></select>
+
+<input type="text" id="playerName" placeholder="Player Name">
+<input type="number" id="kills" placeholder="Kill Points">
+<input type="number" id="placement" placeholder="Placement Points">
+
+<button onclick="savePlayer()">Add / Update Player</button>
+
+<div class="msg" id="msg"></div>
+
+<div class="player-box" id="playerList">
+Loading Players...
+</div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from 
+"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+
+import { getDatabase, ref, update, remove, onValue, push }
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+/* 🔥 Firebase Config */
+const firebaseConfig = {
+  apiKey: "AIzaSyDsJUtZdIXcsB0w_2MQhMBXxIgbI3ijOvg",
+  databaseURL: "https://incoinpaysliveearning-default-rtdb.firebaseio.com",
+  projectId: "incoinpaysliveearning"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const matchSelect = document.getElementById("matchSelect");
+const playerList = document.getElementById("playerList");
+const msg = document.getElementById("msg");
+
+/* 🔥 Load Matches Dropdown */
+const matchesRef = ref(db,"bgmiTournament/matches");
+
+onValue(matchesRef,(snapshot)=>{
+  matchSelect.innerHTML="";
+  if(!snapshot.exists()){
+    const option=document.createElement("option");
+    option.text="No Matches";
+    matchSelect.add(option);
+    return;
+  }
+
+  Object.keys(snapshot.val()).forEach(match=>{
+    const option=document.createElement("option");
+    option.value=match;
+    option.text=match;
+    matchSelect.add(option);
+  });
+
+  loadPlayers();
+});
+
+/* 🔥 Load Players */
+function loadPlayers(){
+
+  const matchId = matchSelect.value;
+  const resultsRef = ref(db,
+    `bgmiTournament/matches/${matchId}/results`
+  );
+
+  onValue(resultsRef,(snapshot)=>{
+    playerList.innerHTML="";
+
+    if(!snapshot.exists()){
+      playerList.innerHTML="No Players Yet";
+      return;
+    }
+
+    const data = snapshot.val();
+
+    const sorted = Object.entries(data)
+      .map(([name,val])=>({name,...val}))
+      .sort((a,b)=>(b.totalPoints||0)-(a.totalPoints||0));
+
+    sorted.forEach((player,index)=>{
+
+      let cls="";
+      if(index===0)cls="gold";
+      if(index===1)cls="silver";
+      if(index===2)cls="bronze";
+
+      const div=document.createElement("div");
+      div.className="player "+cls;
+
+      div.innerHTML=`
+        <b>${index+1}. ${player.name}</b><br>
+        K: ${player.kills||0} |
+        P: ${player.placementPoints||0} |
+        Total: ${player.totalPoints||0}
+        <br>
+        <button class="action-btn edit"
+          onclick="editPlayer('${player.name}',
+          ${player.kills||0},
+          ${player.placementPoints||0})">
+          Edit
+        </button>
+        <button class="action-btn delete"
+          onclick="deletePlayer('${player.name}')">
+          Delete
+        </button>
+      `;
+
+      playerList.appendChild(div);
+    });
+  });
+}
+
+/* 🔥 Save Player */
+window.savePlayer = function(){
+
+  const matchId = matchSelect.value;
+  const name = document.getElementById("playerName").value.trim();
+  const kills = parseInt(document.getElementById("kills").value)||0;
+  const placement = parseInt(document.getElementById("placement").value)||0;
+
+  if(!name){
+    msg.innerHTML="<span class='error'>Enter Player Name</span>";
+    return;
+  }
+
+  const total = kills + placement;
+
+  const playerRef = ref(db,
+    `bgmiTournament/matches/${matchId}/results/${name}`
+  );
+
+  update(playerRef,{
+    kills:kills,
+    placementPoints:placement,
+    totalPoints:total,
+    updatedAt:Date.now()
+  });
+
+  msg.innerHTML="<span class='success'>Saved Successfully ✅</span>";
+
+  document.getElementById("playerName").value="";
+  document.getElementById("kills").value="";
+  document.getElementById("placement").value="";
+}
+
+/* 🔥 Edit Player */
+window.editPlayer = function(name,k,p){
+  document.getElementById("playerName").value=name;
+  document.getElementById("kills").value=k;
+  document.getElementById("placement").value=p;
+}
+
+/* 🔥 Delete Player */
+window.deletePlayer = function(name){
+
+  if(!confirm("Delete "+name+" ?")) return;
+
+  const matchId = matchSelect.value;
+  const playerRef = ref(db,
+    `bgmiTournament/matches/${matchId}/results/${name}`
+  );
+
+  remove(playerRef);
+  msg.innerHTML="<span class='error'>Player Deleted</span>";
+}
+
+matchSelect.addEventListener("change",loadPlayers);
+</script>
+
+</body>
+</html>

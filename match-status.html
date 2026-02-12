@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Match Status Control</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+
+body{
+  font-family:Arial, sans-serif;
+  background:radial-gradient(circle at top,#0f172a,#020617);
+  color:white;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100vh;
+  padding:15px;
+}
+
+.container{
+  width:100%;
+  max-width:420px;
+  background:linear-gradient(180deg,#0f172a,#020617);
+  padding:25px;
+  border-radius:18px;
+  box-shadow:0 0 40px rgba(34,197,94,.2);
+  text-align:center;
+}
+
+.title{
+  font-size:20px;
+  font-weight:bold;
+  color:#22c55e;
+  margin-bottom:20px;
+}
+
+select,input,button{
+  width:100%;
+  padding:12px;
+  margin:10px 0;
+  border:none;
+  border-radius:10px;
+  font-size:14px;
+}
+
+select,input{
+  background:#1e293b;
+  color:white;
+}
+
+button{
+  background:linear-gradient(135deg,#22c55e,#16a34a);
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+button:hover{
+  opacity:.9;
+}
+
+.current-box{
+  background:#1e293b;
+  padding:10px;
+  border-radius:10px;
+  margin-top:15px;
+  font-size:13px;
+}
+
+#msg{
+  margin-top:10px;
+  font-size:13px;
+  font-weight:bold;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <div class="title">🎮 MATCH STATUS CONTROL</div>
+
+  <input type="text" id="matchName" placeholder="Enter Match Name (Ex: Match 1)">
+
+  <select id="statusSelect">
+    <option value="upcoming">Upcoming 🟡</option>
+    <option value="live">Live 🔴</option>
+    <option value="finished">Finished ⚫</option>
+  </select>
+
+  <button onclick="updateStatus()">UPDATE STATUS</button>
+
+  <div id="msg"></div>
+
+  <div class="current-box">
+    Current Match: <span id="currentMatch">Loading...</span><br>
+    Status: <span id="currentStatus">Loading...</span>
+  </div>
+
+</div>
+
+<script type="module">
+
+import { initializeApp } from 
+"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+
+import { getDatabase, ref, set, onValue }
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+/* 🔥 YOUR FIREBASE CONFIG */
+const firebaseConfig = {
+  apiKey: "AIzaSyDsJUtZdIXcsB0w_2MQhMBXxIgbI3ijOvg",
+  databaseURL: "https://incoinpaysliveearning-default-rtdb.firebaseio.com",
+  projectId: "incoinpaysliveearning"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const tournamentRef = ref(db,"tournament");
+
+const msg = document.getElementById("msg");
+
+/* 🔥 UPDATE STATUS */
+window.updateStatus = async function(){
+
+  const matchName = document.getElementById("matchName").value.trim();
+  const status = document.getElementById("statusSelect").value;
+
+  if(!matchName){
+    msg.innerText="❌ Enter Match Name";
+    msg.style.color="red";
+    return;
+  }
+
+  await set(tournamentRef,{
+    currentMatch: matchName,
+    status: status,
+    updatedAt: Date.now()
+  });
+
+  msg.innerText="✅ Match Updated Successfully";
+  msg.style.color="#22c55e";
+}
+
+/* 🔥 LIVE DISPLAY */
+onValue(tournamentRef,(snapshot)=>{
+
+  if(snapshot.exists()){
+    const data = snapshot.val();
+
+    document.getElementById("currentMatch").innerText =
+      data.currentMatch || "-";
+
+    document.getElementById("currentStatus").innerText =
+      data.status || "-";
+  }
+
+});
+
+</script>
+
+</body>
+</html>

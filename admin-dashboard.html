@@ -3,6 +3,8 @@
 <head>
 <title>BGMI Admin Panel</title>
 
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <style>
 body{
   background:#020617;
@@ -11,11 +13,15 @@ body{
   margin:0;
 }
 
+/* 🔝 TOP BAR */
 .topbar{
   display:flex;
   justify-content:space-between;
   align-items:center;
-  padding:15px 20px;
+  padding:15px;
+  position:sticky;
+  top:0;
+  background:#020617;
 }
 
 .logout-btn{
@@ -32,22 +38,26 @@ body{
   opacity:.85;
 }
 
+/* 📦 MAIN BOX */
 .box{
-  width:420px;
-  margin:20px auto;
+  width:95%;
+  max-width:420px;
+  margin:10px auto 30px auto;  /* 🔥 thoda upar */
   background:#0f172a;
-  padding:20px;
+  padding:18px;
   border-radius:12px;
   text-align:center;
+  box-sizing:border-box;
 }
 
 h2{
-  margin-bottom:20px;
+  margin-bottom:18px;
 }
 
+/* 📄 CARDS */
 .card{
   background:#020617;
-  padding:15px;
+  padding:14px;
   margin:12px 0;
   border-radius:10px;
   cursor:pointer;
@@ -60,8 +70,23 @@ h2{
 
 .card span{
   display:block;
-  font-size:14px;
+  font-size:13px;
   opacity:0.8;
+  margin-top:5px;
+}
+
+/* 📱 Extra small devices */
+@media (max-width:400px){
+  .box{
+    padding:15px;
+  }
+  .card{
+    padding:12px;
+  }
+  .logout-btn{
+    padding:6px 10px;
+    font-size:13px;
+  }
 }
 </style>
 </head>
@@ -70,8 +95,7 @@ h2{
 
 <!-- 🔝 TOP BAR -->
 <div class="topbar">
-  <div style="font-size:18px;font-weight:bold;color:#22c55e;">
-    BGMI ADMIN PANEL
+  <div style="font-size:16px;font-weight:bold;color:#22c55e;">
   </div>
   <button class="logout-btn" onclick="logout()">Logout</button>
 </div>
@@ -121,7 +145,7 @@ if(!loginTime){
 function logout(){
   localStorage.removeItem("admin_login_time");
   alert("Logged out successfully");
-  window.location.href = "../index.html";  // change if needed
+  window.location.href = "../index.html";
 }
 
 function openPage(page){

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Login - Premium App</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial, sans-serif;
+  background:linear-gradient(180deg,#020617,#0f172a);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+  color:white;
+}
+
+/* Card */
+.login-box{
+  width:90%;
+  max-width:380px;
+  background:rgba(255,255,255,0.05);
+  backdrop-filter:blur(15px);
+  padding:25px;
+  border-radius:20px;
+  box-shadow:0 0 25px rgba(34,197,94,.2);
+  animation:fadeIn .5s ease;
+}
+
+@keyframes fadeIn{
+  from{opacity:0;transform:translateY(10px);}
+  to{opacity:1;transform:translateY(0);}
+}
+
+.title{
+  text-align:center;
+  font-size:22px;
+  margin-bottom:20px;
+  color:#22c55e;
+  font-weight:bold;
+}
+
+input{
+  width:100%;
+  padding:12px;
+  margin-bottom:15px;
+  border-radius:10px;
+  border:none;
+  outline:none;
+  font-size:14px;
+}
+
+button{
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:10px;
+  background:#22c55e;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+  font-size:14px;
+  transition:.3s;
+}
+
+button:hover{
+  background:#16a34a;
+}
+
+.switch{
+  text-align:center;
+  margin-top:15px;
+  font-size:13px;
+  cursor:pointer;
+  color:#38bdf8;
+}
+
+/* Loading */
+#loading{
+  position:fixed;
+  width:100%;
+  height:100%;
+  background:rgba(0,0,0,.6);
+  display:none;
+  justify-content:center;
+  align-items:center;
+}
+
+.loader{
+  border:4px solid #1e293b;
+  border-top:4px solid #22c55e;
+  border-radius:50%;
+  width:40px;
+  height:40px;
+  animation:spin 1s linear infinite;
+}
+
+@keyframes spin{
+  0%{transform:rotate(0)}
+  100%{transform:rotate(360deg)}
+}
+</style>
+</head>
+
+<body>
+
+<div class="login-box">
+
+  <div class="title" id="formTitle">Login</div>
+
+  <input type="email" id="email" placeholder="Enter Email">
+  <input type="password" id="password" placeholder="Enter Password">
+
+  <button onclick="handleAuth()">Login</button>
+
+  <div class="switch" onclick="toggleMode()">
+    Don't have account? Register
+  </div>
+
+</div>
+
+<div id="loading"><div class="loader"></div></div>
+
+<script type="module">
+
+import { initializeApp } from 
+"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+
+import { getAuth, signInWithEmailAndPassword,
+createUserWithEmailAndPassword,
+onAuthStateChanged } 
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+import { getDatabase, ref, set } 
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+/* 🔑 Firebase Config */
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDsJUtZdIXcsB0w_2MQhMBXxIgbI3ijOvg",
+  authDomain: "incoinpaysliveearning.firebaseapp.com",
+  databaseURL: "https://incoinpaysliveearning-default-rtdb.firebaseio.com",
+  projectId: "incoinpaysliveearning",
+  storageBucket: "incoinpaysliveearning.firebasestorage.app",
+  messagingSenderId: "971873814750",
+  appId: "1:971873814750:web:7418c7da119e4725ed9a4f"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+const loading = document.getElementById("loading");
+let isLogin = true;
+
+/* 🔄 Toggle Login/Register */
+
+window.toggleMode = function(){
+
+  isLogin = !isLogin;
+
+  document.getElementById("formTitle").innerText =
+    isLogin ? "Login" : "Register";
+
+  document.querySelector("button").innerText =
+    isLogin ? "Login" : "Register";
+
+  document.querySelector(".switch").innerText =
+    isLogin ? "Don't have account? Register"
+            : "Already have account? Login";
+
+}
+
+/* 🔐 Handle Auth */
+
+window.handleAuth = async function(){
+
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  if(!email || !password){
+    alert("Please fill all fields");
+    return;
+  }
+
+  try{
+
+    loading.style.display="flex";
+
+    if(isLogin){
+
+      await signInWithEmailAndPassword(auth,email,password);
+
+    }else{
+
+      const userCred = await createUserWithEmailAndPassword(auth,email,password);
+
+      // 🔥 Create User Wallet Structure
+      await set(ref(db,"users/"+userCred.user.uid),{
+        wallet:0,
+        bonus:0,
+        withdrawable:0,
+        premium:false,
+        createdAt:Date.now()
+      });
+
+    }
+
+    window.location.href="dashboard.html";
+
+  }catch(error){
+
+    alert(error.message);
+
+  }
+
+  loading.style.display="none";
+
+}
+
+/* 🔄 Auto Redirect if Logged In */
+
+onAuthStateChanged(auth,(user)=>{
+  if(user){
+    window.location.href="dashboard.html";
+  }
+});
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wallet</title>
+
+<style>
+body{
+  margin:0;
+  background:#020617;
+  font-family:Arial;
+  color:white;
+}
+
+/* Header */
+.header{
+  text-align:center;
+  padding:15px;
+  font-size:18px;
+  font-weight:bold;
+  color:#22c55e;
+}
+
+/* ATM CARD STYLE */
+.wallet-card{
+  width:92%;
+  max-width:380px;
+  height:210px;
+  margin:20px auto;
+  border-radius:20px;
+  padding:20px;
+  position:relative;
+  background:linear-gradient(135deg,#d1d5db,#9ca3af,#e5e7eb);
+  color:black;
+  box-shadow:0 10px 30px rgba(0,0,0,.4);
+}
+
+/* Chip */
+.chip{
+  width:50px;
+  height:35px;
+  background:gold;
+  border-radius:6px;
+  margin-bottom:20px;
+}
+
+/* Balance */
+.balance-label{
+  font-size:13px;
+  opacity:.7;
+}
+
+.balance{
+  font-size:26px;
+  font-weight:bold;
+  margin-top:5px;
+}
+
+/* Recharge Button (Top Right) */
+.recharge-btn{
+  position:absolute;
+  top:15px;
+  right:15px;
+  background:black;
+  color:white;
+  padding:6px 12px;
+  border-radius:20px;
+  font-size:12px;
+  cursor:pointer;
+}
+
+/* Premium Badge */
+.premium{
+  position:absolute;
+  bottom:15px;
+  right:15px;
+  font-size:12px;
+  background:black;
+  color:gold;
+  padding:4px 10px;
+  border-radius:20px;
+}
+
+/* POPUP */
+.popup{
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:rgba(0,0,0,.7);
+  display:none;
+  justify-content:center;
+  align-items:center;
+}
+
+.popup-box{
+  width:85%;
+  max-width:300px;
+  background:#0f172a;
+  padding:20px;
+  border-radius:15px;
+  text-align:center;
+}
+
+.popup-box input{
+  width:100%;
+  padding:10px;
+  margin:15px 0;
+  border:none;
+  border-radius:8px;
+  outline:none;
+}
+
+.popup-box button{
+  padding:10px 15px;
+  border:none;
+  border-radius:8px;
+  background:#22c55e;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+/* Bottom Nav */
+.bottom-nav{
+  position:fixed;
+  bottom:0;
+  width:100%;
+  background:#0f172a;
+  display:flex;
+  justify-content:space-around;
+  padding:10px 0;
+  border-top:1px solid #1e293b;
+}
+
+.nav-btn{
+  color:#64748b;
+  font-size:12px;
+  text-align:center;
+  cursor:pointer;
+}
+
+.nav-btn.active{
+  color:#22c55e;
+  transform:scale(1.1);
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">💳 My Wallet</div>
+
+<!-- 🔥 ATM STYLE CARD -->
+<div class="wallet-card">
+
+  <div class="recharge-btn" onclick="openPopup()">+ Recharge</div>
+
+  <div class="chip"></div>
+
+  <div class="balance-label">Available Balance</div>
+  <div class="balance">₹ <span id="walletBalance">0</span></div>
+
+  <div id="premiumBadge"></div>
+
+</div>
+
+<!-- 🔥 RECHARGE POPUP -->
+<div class="popup" id="rechargePopup">
+  <div class="popup-box">
+    <h3>Enter Recharge Amount</h3>
+    <input type="number" id="amountInput" placeholder="Enter Amount">
+    <button onclick="sendRecharge()">OK</button>
+  </div>
+</div>
+
+<!-- Bottom Navigation -->
+<div class="bottom-nav">
+  <div class="nav-btn" onclick="goPage('dashboard.html')">🏠<br>Home</div>
+  <div class="nav-btn active">💰<br>Wallet</div>
+  <div class="nav-btn" onclick="goPage('games.html')">🎮<br>Games</div>
+  <div class="nav-btn" onclick="goPage('profile.html')">👤<br>Profile</div>
+</div>
+
+<script type="module">
+
+import { initializeApp } from 
+"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+
+import { getDatabase, ref, onValue, push }
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDsJUtZdIXcsB0w_2MQhMBXxIgbI3ijOvg",
+  authDomain: "incoinpaysliveearning.firebaseapp.com",
+  databaseURL: "https://incoinpaysliveearning-default-rtdb.firebaseio.com",
+  projectId: "incoinpaysliveearning",
+  storageBucket: "incoinpaysliveearning.firebasestorage.app",
+  messagingSenderId: "971873814750",
+  appId: "1:971873814750:web:7418c7da119e4725ed9a4f"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+let userId = "demoUser"; // Later auth based kar sakte ho
+
+const walletEl = document.getElementById("walletBalance");
+const badgeEl = document.getElementById("premiumBadge");
+
+/* 🔥 Live Wallet Balance */
+onValue(ref(db,"users/"+userId),snap=>{
+  if(!snap.exists()) return;
+
+  const data = snap.val();
+  walletEl.innerText = data.wallet ? data.wallet : 0;
+
+  if(data.walletType === "premium"){
+    badgeEl.innerHTML = "<div class='premium'>👑 PREMIUM</div>";
+  }
+});
+
+/* Popup */
+window.openPopup = function(){
+  document.getElementById("rechargePopup").style.display="flex";
+};
+
+/* Close when clicking outside */
+document.getElementById("rechargePopup").addEventListener("click",(e)=>{
+  if(e.target.id==="rechargePopup"){
+    e.target.style.display="none";
+  }
+});
+
+/* Send Recharge Request */
+window.sendRecharge = async function(){
+
+  const amount = parseInt(document.getElementById("amountInput").value);
+
+  if(!amount || amount < 10){
+    alert("Minimum ₹10 Required");
+    return;
+  }
+
+  await push(ref(db,"rechargeRequests"),{
+    userId:userId,
+    amount:amount,
+    status:"pending",
+    time:Date.now()
+  });
+
+  alert("✅ Recharge Request Sent To Admin");
+  document.getElementById("amountInput").value="";
+  document.getElementById("rechargePopup").style.display="none";
+};
+
+/* Navigation */
+window.goPage = function(page){
+  window.location.href = page;
+};
+
+</script>
+
+</body>
+</html>

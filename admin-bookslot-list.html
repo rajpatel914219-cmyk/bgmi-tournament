@@ -2,12 +2,11 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>BGMI Tournament Admin Dashboard</title>
+<title>BGMI Tournament Admin Dashboard PRO</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
 body{
-  margin:0;
   background:#020617;
   font-family:Arial;
   color:white;
@@ -24,6 +23,23 @@ body{
 h2{
   text-align:center;
   margin-bottom:15px;
+}
+
+/* STATS */
+.stats{
+  display:flex;
+  gap:15px;
+  justify-content:center;
+  flex-wrap:wrap;
+  margin-bottom:15px;
+}
+
+.stat{
+  background:#020617;
+  padding:10px 15px;
+  border-radius:8px;
+  border:1px solid #1e293b;
+  font-size:13px;
 }
 
 /* CONTROLS */
@@ -50,7 +66,20 @@ button:hover{
   color:black;
 }
 
-/* SMALL SLOT GRID */
+/* SEARCH */
+.search{
+  text-align:center;
+  margin-bottom:15px;
+}
+
+.search input{
+  padding:6px;
+  width:250px;
+  border-radius:6px;
+  border:none;
+}
+
+/* GRID */
 .slots{
   display:grid;
   grid-template-columns:repeat(5,1fr);
@@ -62,10 +91,9 @@ button:hover{
   border:1px solid #1e293b;
   border-radius:8px;
   padding:8px;
-  min-height:85px;
-  cursor:pointer;
-  transition:0.3s;
+  min-height:120px;
   font-size:11px;
+  position:relative;
 }
 
 .slot.booked{
@@ -90,7 +118,35 @@ button:hover{
   font-weight:bold;
 }
 
-/* MOBILE */
+.badge{
+  display:inline-block;
+  padding:2px 6px;
+  font-size:10px;
+  border-radius:5px;
+  margin-bottom:4px;
+}
+
+.paid{
+  background:#22c55e;
+  color:black;
+}
+
+.pending{
+  background:#ef4444;
+  color:white;
+}
+
+.delete-btn{
+  margin-top:6px;
+  background:#ef4444;
+  color:white;
+  border:none;
+  padding:4px 6px;
+  border-radius:5px;
+  font-size:10px;
+  cursor:pointer;
+}
+
 @media(max-width:768px){
   .slots{
     grid-template-columns:repeat(2,1fr);
@@ -102,11 +158,22 @@ button:hover{
 <body>
 
 <div class="box">
-<h2>🎮 BGMI TOURNAMENT DASHBOARD</h2>
+<h2>🎮 BGMI TOURNAMENT DASHBOARD PRO</h2>
+
+<div class="stats">
+  <div class="stat">👥 Teams: <span id="totalTeams">0</span>/25</div>
+  <div class="stat">💰 Collection: ₹<span id="totalMoney">0</span></div>
+  <div class="stat">🔒 Slots: <span id="slotStatus">Open</span></div>
+</div>
+
+<div class="search">
+  <input type="text" id="searchInput" placeholder="Search Team or Player..." onkeyup="filterTeams()">
+</div>
 
 <div class="controls">
-  <button onclick="clearAll()">🧹 Clear All Teams</button>
+  <button onclick="clearAll()">🧹 Clear All</button>
   <button onclick="exportCSV()">📁 Export CSV</button>
+  <button onclick="toggleSlots()">🔒 Toggle Slot Lock</button>
 </div>
 
 <div class="slots" id="slots"></div>
@@ -116,10 +183,9 @@ button:hover{
 <script type="module">
 import { initializeApp } from
 "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, onValue, remove }
+import { getDatabase, ref, onValue, remove, update }
 from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-/* 🔥 FIREBASE CONFIG */
 const firebaseConfig = {
   apiKey: "AIzaSyDsJUtZdIXcsB0w_2MQhMBXxIgbI3ijOvg",
   databaseURL: "https://incoinpaysliveearning-default-rtdb.firebaseio.com",
@@ -131,8 +197,10 @@ const db = getDatabase(app);
 
 const slotsDiv = document.getElementById("slots");
 const TOTAL_TEAMS = 25;
+const ENTRY_FEE = 100;
 
 let bookingData = {};
+let slotOpen = true;
 
 /* DRAW EMPTY GRID */
 function drawEmpty(){
@@ -152,7 +220,14 @@ drawEmpty();
 onValue(ref(db,"bookings"), snap=>{
   drawEmpty();
   bookingData={};
-  if(!snap.exists()) return;
+  let count=0;
+  let money=0;
+
+  if(!snap.exists()){
+    document.getElementById("totalTeams").innerText=0;
+    document.getElementById("totalMoney").innerText=0;
+    return;
+  }
 
   let i=1;
   snap.forEach(child=>{
@@ -160,9 +235,18 @@ onValue(ref(db,"bookings"), snap=>{
 
     const d = child.val();
     bookingData[i] = child.key;
+    count++;
 
     const slot = document.getElementById("team-"+i);
     slot.classList.add("booked");
+
+    let paymentBadge="";
+    if(d.paid){
+      paymentBadge=`<div class="badge paid">PAID</div>`;
+      money+=ENTRY_FEE;
+    }else{
+      paymentBadge=`<div class="badge pending">PENDING</div>`;
+    }
 
     let playersHTML="";
     if(d.players){
@@ -176,25 +260,28 @@ onValue(ref(db,"bookings"), snap=>{
     }
 
     slot.innerHTML=`
+      ${paymentBadge}
       <div class="teamName">${d.teamName}</div>
       ${playersHTML}
+      <button class="delete-btn" onclick="deleteTeam(${i})">❌ Delete</button>
     `;
-
-    slot.onclick=()=>deleteTeam(i);
 
     i++;
   });
+
+  document.getElementById("totalTeams").innerText=count;
+  document.getElementById("totalMoney").innerText=money;
 });
 
-/* DELETE FULL TEAM */
-function deleteTeam(teamNo){
+/* DELETE TEAM */
+window.deleteTeam = function(teamNo){
   const key = bookingData[teamNo];
   if(!key) return;
 
   if(confirm("Delete Full Team?")){
     remove(ref(db,"bookings/"+key));
   }
-}
+};
 
 /* CLEAR ALL */
 window.clearAll=()=>{
@@ -203,17 +290,46 @@ window.clearAll=()=>{
   }
 };
 
+/* SLOT LOCK */
+onValue(ref(db,"tournament/settings"), snap=>{
+  if(snap.exists()){
+    slotOpen = snap.val().slotsOpen;
+  }
+  document.getElementById("slotStatus").innerText = slotOpen ? "Open" : "Closed";
+});
+
+window.toggleSlots=()=>{
+  update(ref(db,"tournament/settings"),{
+    slotsOpen: !slotOpen
+  });
+};
+
+/* SEARCH */
+window.filterTeams=()=>{
+  const input=document.getElementById("searchInput").value.toLowerCase();
+  const slots=document.querySelectorAll(".slot");
+
+  slots.forEach(slot=>{
+    if(slot.innerText.toLowerCase().includes(input)){
+      slot.style.display="block";
+    }else{
+      slot.style.display="none";
+    }
+  });
+};
+
 /* EXPORT CSV */
 window.exportCSV=()=>{
-  let csv="Team,Player Name\n";
-
+  let csv="Team,Player Name,Payment\n";
   const slots=document.querySelectorAll(".slot.booked");
+
   slots.forEach(slot=>{
     const teamName=slot.querySelector(".teamName").innerText;
     const players=slot.querySelectorAll(".player");
+    const paid=slot.querySelector(".paid")?"Paid":"Pending";
 
     players.forEach(p=>{
-      csv+=`${teamName},${p.innerText.replace("👑 ","")}\n`;
+      csv+=`${teamName},${p.innerText.replace("👑 ","")},${paid}\n`;
     });
   });
 

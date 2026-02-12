@@ -56,10 +56,6 @@ th{
 .silver{background:silver;color:black;font-weight:bold;}
 .bronze{background:#cd7f32;color:black;font-weight:bold;}
 
-.crown{
-  font-size:16px;
-}
-
 .fadeIn{
   animation:fade .5s ease-in-out;
 }
@@ -108,7 +104,7 @@ import { initializeApp } from
 import { getDatabase, ref, onValue }
 from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-/* 🔥 YOUR FIREBASE CONFIG */
+/* ✅ YOUR FIREBASE CONFIG */
 const firebaseConfig = {
   apiKey: "AIzaSyDsJUtZdIXcsB0w_2MQhMBXxIgbI3ijOvg",
   databaseURL: "https://incoinpaysliveearning-default-rtdb.firebaseio.com",
@@ -118,12 +114,12 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-/* 🔥 PATH TO ALL MATCHES */
+/* 🔥 CHECK YOUR REAL PATH HERE */
 const matchesRef = ref(db,"bgmiTournament/matches");
 
 const tableBody = document.getElementById("leaderboardBody");
 
-/* 🔥 NUMBER ANIMATION */
+/* 🔢 SAFE ANIMATION */
 function animateValue(element,start,end,duration){
   let startTime = null;
 
@@ -131,7 +127,6 @@ function animateValue(element,start,end,duration){
     if(!startTime) startTime = currentTime;
     const progress = Math.min((currentTime - startTime) / duration, 1);
     element.innerText = Math.floor(progress*(end-start)+start);
-
     if(progress < 1){
       requestAnimationFrame(animation);
     }
@@ -139,35 +134,36 @@ function animateValue(element,start,end,duration){
   requestAnimationFrame(animation);
 }
 
-/* 🔥 REALTIME GRAND TOTAL CALCULATION */
+/* 🔥 REALTIME LISTENER */
 onValue(matchesRef,(snapshot)=>{
+
+  console.log("Matches Data:", snapshot.val());
 
   tableBody.innerHTML="";
 
   if(!snapshot.exists()){
     tableBody.innerHTML =
-      "<tr><td colspan='3'>No Matches Yet</td></tr>";
+      "<tr><td colspan='3'>No Matches Data Found</td></tr>";
     return;
   }
 
   const matches = snapshot.val();
   const grandTotals = {};
 
-  /* 🔥 LOOP ALL MATCHES */
   Object.keys(matches).forEach(matchId=>{
 
-    const results = matches[matchId].results;
-    if(!results) return;
+    if(!matches[matchId].results) return;
 
-    Object.keys(results).forEach(player=>{
+    Object.values(matches[matchId].results).forEach(playerData=>{
 
-      const points = results[player].totalPoints || 0;
+      const playerName = playerData.name || playerData.playerName || "Unknown";
+      const totalPoints = Number(playerData.totalPoints || 0);
 
-      if(!grandTotals[player]){
-        grandTotals[player]=0;
+      if(!grandTotals[playerName]){
+        grandTotals[playerName] = 0;
       }
 
-      grandTotals[player]+=points;
+      grandTotals[playerName] += totalPoints;
 
     });
 
@@ -204,10 +200,14 @@ onValue(matchesRef,(snapshot)=>{
     tableBody.appendChild(row);
 
     const pointCell=document.getElementById(`points-${index}`);
-    animateValue(pointCell,0,player.total,700);
+    animateValue(pointCell,0,player.total,600);
 
   });
 
+},(error)=>{
+  console.error("Firebase Error:",error);
+  tableBody.innerHTML =
+    "<tr><td colspan='3'>Database Permission Error</td></tr>";
 });
 </script>
 

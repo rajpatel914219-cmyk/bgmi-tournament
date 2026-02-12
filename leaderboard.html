@@ -90,18 +90,6 @@ th{
   color:black;
   font-weight:bold;
 }
-
-button{
-  width:100%;
-  padding:12px;
-  margin-top:15px;
-  border:none;
-  border-radius:10px;
-  font-weight:bold;
-  cursor:pointer;
-  background:linear-gradient(135deg,#22c55e,#16a34a);
-  color:white;
-}
 </style>
 </head>
 
@@ -127,8 +115,6 @@ button{
   </table>
 
   <div id="winnerBox"></div>
-
-  <button onclick="goHome()">🏠 Back To Home</button>
 
 </div>
 
@@ -238,12 +224,6 @@ onValue(resultsRef,(snapshot)=>{
   }
 
 });
-
-/* 🔗 NAVIGATION */
-window.goHome = ()=>{
-  window.location.href = "index.html";
-};
-
 </script>
 
 </body>

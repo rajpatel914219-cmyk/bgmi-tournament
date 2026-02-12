@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Secure Login - BGMI</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+*{
+  box-sizing:border-box;
+  margin:0;
+  padding:0;
+  font-family:Arial, sans-serif;
+}
+
+body{
+  background:radial-gradient(circle at top,#0f172a,#020617);
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  color:white;
+}
+
+.container{
+  width:100%;
+  max-width:380px;
+  background:#0f172a;
+  padding:25px;
+  border-radius:18px;
+  box-shadow:0 0 30px rgba(34,197,94,.3);
+  text-align:center;
+}
+
+h2{
+  color:#22c55e;
+  margin-bottom:20px;
+}
+
+input{
+  width:100%;
+  padding:13px;
+  margin:8px 0;
+  border:none;
+  border-radius:10px;
+  background:#020617;
+  color:white;
+  font-size:14px;
+}
+
+button{
+  width:100%;
+  padding:13px;
+  margin-top:10px;
+  border:none;
+  border-radius:10px;
+  font-weight:bold;
+  cursor:pointer;
+  transition:.3s;
+}
+
+.login-btn{
+  background:linear-gradient(135deg,#22c55e,#16a34a);
+  color:white;
+}
+
+.register-btn{
+  background:#2563eb;
+  color:white;
+}
+
+button:hover{
+  transform:scale(1.03);
+  opacity:.9;
+}
+
+#msg{
+  margin-top:12px;
+  font-size:14px;
+  font-weight:bold;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <h2>🔐 Secure Login</h2>
+
+  <input type="email" id="email" placeholder="Enter Email">
+  <input type="password" id="password" placeholder="Enter Password">
+
+  <button class="login-btn" onclick="login()">Login</button>
+  <button class="register-btn" onclick="register()">Register</button>
+
+  <div id="msg"></div>
+</div>
+
+<script type="module">
+import { initializeApp } from 
+"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged }
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+import { getDatabase, ref, set }
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+/* 🔥 YOUR FIREBASE CONFIG */
+const firebaseConfig = {
+  apiKey: "AIzaSyDsJUtZdIXcsB0w_2MQhMBXxIgbI3ijOvg",
+  databaseURL: "https://incoinpaysliveearning-default-rtdb.firebaseio.com",
+  projectId: "incoinpaysliveearning"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+const msg = document.getElementById("msg");
+
+/* REGISTER */
+window.register = async ()=>{
+
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
+
+  if(!email || !password){
+    return showMsg("❌ Enter email & password","red");
+  }
+
+  try{
+    const userCred = await createUserWithEmailAndPassword(auth,email,password);
+
+    await set(ref(db,"users/"+userCred.user.uid),{
+      email: email,
+      role: "player",
+      wallet: 0,
+      createdAt: Date.now()
+    });
+
+    showMsg("✅ Registration Successful","#22c55e");
+
+  }catch(err){
+    showMsg("❌ " + err.message,"red");
+  }
+};
+
+/* LOGIN */
+window.login = async ()=>{
+
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
+
+  if(!email || !password){
+    return showMsg("❌ Enter email & password","red");
+  }
+
+  try{
+    await signInWithEmailAndPassword(auth,email,password);
+
+    showMsg("✅ Login Successful","#22c55e");
+
+    setTimeout(()=>{
+      window.location.href="dashboard.html";
+    },1000);
+
+  }catch(err){
+    showMsg("❌ Invalid Email or Password","red");
+  }
+};
+
+/* AUTO LOGIN REDIRECT */
+onAuthStateChanged(auth,(user)=>{
+  if(user){
+    window.location.href="dashboard.html";
+  }
+});
+
+function showMsg(text,color){
+  msg.innerText = text;
+  msg.style.color = color;
+}
+</script>
+
+</body>
+</html>

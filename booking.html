@@ -71,7 +71,6 @@ body{
   font-weight:bold;
 }
 
-/* 🔥 MODAL */
 .modal{
   position:fixed;
   top:0;
@@ -123,63 +122,59 @@ body{
   💰 Wallet: ₹ <span id="walletBalance">0</span>
 </div>
 
-<!-- SOLO -->
 <div class="card">
   <div class="card-left">
     <h3>🥇 SOLO</h3>
     <p class="slot">Slots: <span id="soloCount">0</span>/100</p>
   </div>
-  <button class="join-btn" onclick="openSecurity('solo',10,100)">JOIN</button>
+  <button class="join-btn" data-type="solo" data-fee="10" data-max="100">JOIN</button>
 </div>
 
-<!-- DUO -->
 <div class="card">
   <div class="card-left">
     <h3>🥈 DUO</h3>
     <p class="slot">Slots: <span id="duoCount">0</span>/50</p>
   </div>
-  <button class="join-btn" onclick="openSecurity('duo',20,50)">JOIN</button>
+  <button class="join-btn" data-type="duo" data-fee="20" data-max="50">JOIN</button>
 </div>
 
-<!-- SQUAD -->
 <div class="card">
   <div class="card-left">
     <h3>🏆 SQUAD</h3>
     <p class="slot">Slots: <span id="squadCount">0</span>/25</p>
   </div>
-  <button class="join-btn" onclick="openSecurity('squad',40,25)">JOIN</button>
+  <button class="join-btn" data-type="squad" data-fee="40" data-max="25">JOIN</button>
 </div>
 
-<!-- TDM -->
 <div class="card">
   <div class="card-left">
     <h3>⚔️ TDM</h3>
     <p class="slot">Slots: <span id="tdmCount">0</span>/20</p>
   </div>
-  <button class="join-btn" onclick="openSecurity('tdm',15,20)">JOIN</button>
+  <button class="join-btn" data-type="tdm" data-fee="15" data-max="20">JOIN</button>
 </div>
 
 <div id="msg"></div>
 
-<!-- 🔥 SECURITY MODAL -->
 <div class="modal" id="securityModal">
-  <div class="modal-box" id="modalInner">
+  <div class="modal-box">
     <h3>Enter Security Code</h3>
-    <input type="password" id="securityInput" placeholder="Security Code">
-    <button onclick="verifySecurity()">Verify</button>
+    <input type="password" id="securityInput">
+    <button id="verifyBtn">Verify</button>
   </div>
 </div>
 
 <script type="module">
+
 import { initializeApp } from 
 "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, get, update, push, onValue }
 from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDsJUtZdIXcsB0w_2MQhMBXxIgbI3ijOvg",
-  databaseURL: "https://incoinpaysliveearning-default-rtdb.firebaseio.com",
-  projectId: "incoinpaysliveearning"
+  apiKey: "YOUR_API_KEY",
+  databaseURL: "YOUR_DATABASE_URL",
+  projectId: "YOUR_PROJECT_ID"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -192,19 +187,16 @@ const walletEl=document.getElementById("walletBalance");
 const msg=document.getElementById("msg");
 const modal=document.getElementById("securityModal");
 
-/* Close popup on outside click */
 modal.addEventListener("click",(e)=>{
   if(e.target===modal){
     modal.style.display="none";
   }
 });
 
-/* Live wallet */
 onValue(ref(db,"users/"+userId+"/wallet"),snap=>{
   walletEl.innerText=snap.exists()?snap.val():0;
 });
 
-/* Slot listeners */
 function listen(type,id){
   onValue(ref(db,"matches/"+type+"/players"),snap=>{
     let count=snap.exists()?Object.keys(snap.val()).length:0;
@@ -217,29 +209,25 @@ listen("duo","duoCount");
 listen("squad","squadCount");
 listen("tdm","tdmCount");
 
-/* Open security modal */
-window.openSecurity=(type,fee,max)=>{
-  selectedType=type;
-  selectedFee=fee;
-  selectedMax=max;
-  document.getElementById("securityInput").value="";
-  modal.style.display="flex";
-};
+/* 🔥 FIXED JOIN BUTTON LISTENER */
+document.querySelectorAll(".join-btn").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    selectedType=btn.dataset.type;
+    selectedFee=parseInt(btn.dataset.fee);
+    selectedMax=parseInt(btn.dataset.max);
+    document.getElementById("securityInput").value="";
+    modal.style.display="flex";
+  });
+});
 
-/* Verify code */
-window.verifySecurity=async()=>{
+document.getElementById("verifyBtn").addEventListener("click", async ()=>{
 
   const entered=document.getElementById("securityInput").value;
   if(!entered) return;
 
   const codeSnap=await get(ref(db,"matchSecurity/"+selectedType));
-  if(!codeSnap.exists()){
-    return showMsg("❌ Code Not Set","red");
-  }
-
-  if(entered!==codeSnap.val()){
-    return showMsg("❌ Wrong Code","red");
-  }
+  if(!codeSnap.exists()) return showMsg("❌ Code Not Set","red");
+  if(entered!==codeSnap.val()) return showMsg("❌ Wrong Code","red");
 
   modal.style.display="none";
 
@@ -249,19 +237,14 @@ window.verifySecurity=async()=>{
   const walletSnap=await get(ref(db,"users/"+userId+"/wallet"));
   let balance=walletSnap.exists()?walletSnap.val():0;
 
-  if(balance<selectedFee){
-    return showMsg("❌ Not Enough Balance","red");
-  }
+  if(balance<selectedFee) return showMsg("❌ Not Enough Balance","red");
 
   const playersSnap=await get(ref(db,"matches/"+selectedType+"/players"));
   let count=playersSnap.exists()?Object.keys(playersSnap.val()).length:0;
 
-  if(count>=selectedMax){
-    return showMsg("⚠️ Match Full","orange");
-  }
+  if(count>=selectedMax) return showMsg("⚠️ Match Full","orange");
 
   balance-=selectedFee;
-
   await update(ref(db,"users/"+userId),{wallet:balance});
 
   await push(ref(db,"matches/"+selectedType+"/players"),{
@@ -271,12 +254,13 @@ window.verifySecurity=async()=>{
   });
 
   showMsg("✅ Joined "+selectedType.toUpperCase(),"#22c55e");
-};
+});
 
 function showMsg(text,color){
   msg.innerText=text;
   msg.style.color=color;
 }
+
 </script>
 
 </body>

@@ -1,167 +1,180 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>BGMI Admin Panel</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin Panel</title>
 
 <style>
-*{box-sizing:border-box;}
-
 body{
-  background:#020617;
+  margin:0;
+  background:#0f172a;
   font-family:Arial;
   color:white;
-  margin:0;
 }
 
-.topbar{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
+.header{
   padding:15px;
-}
-
-.panel-title{
-  font-size:16px;
+  background:#020617;
+  text-align:center;
   font-weight:bold;
   color:#22c55e;
 }
 
-.logout-btn{
-  background:#ef4444;
-  border:none;
-  padding:7px 12px;
-  border-radius:8px;
-  color:white;
-  cursor:pointer;
-  font-size:13px;
-  font-weight:bold;
-}
-
-.box{
-  width:100%;
-  max-width:400px;
-  margin:10px auto 30px auto;
-  background:#0f172a;
-  padding:18px;
-  border-radius:14px;
+.section{
+  padding:15px;
 }
 
 .card{
-  background:#020617;
-  padding:14px;
-  margin:12px 0;
-  border-radius:12px;
-  cursor:pointer;
-  transition:.3s;
-}
-
-.card:hover{
   background:#1e293b;
+  padding:15px;
+  border-radius:10px;
+  margin-bottom:15px;
 }
 
-.card span{
-  display:block;
-  font-size:12px;
-  opacity:.8;
-  margin-top:5px;
+input,button{
+  width:100%;
+  padding:10px;
+  margin-top:8px;
+  border-radius:8px;
+  border:none;
+}
+
+button{
+  background:#22c55e;
+  color:black;
+  font-weight:bold;
 }
 </style>
 </head>
-
 <body>
 
-<div class="topbar">
-  <div class="panel-title"></div>
-  <button class="logout-btn" onclick="logout()">Logout</button>
+<div class="header">🔥 ADMIN PANEL</div>
+
+<div class="section">
+
+<!-- 📢 Broadcast -->
+<div class="card">
+<h3>Send Broadcast</h3>
+<input type="text" id="broadcastMsg" placeholder="Enter Message">
+<button onclick="sendBroadcast()">Send</button>
 </div>
 
-<div class="box">
+<!-- 💳 Recharge Requests -->
+<div class="card">
+<h3>Recharge Requests</h3>
+<div id="rechargeList"></div>
+</div>
 
-  <div class="card" onclick="openPage('admin-accesskey.html')">
-    🔑 Access Key & Slots
-    <span>Create key • Manage expiry</span>
-  </div>
-
-  <div class="card" onclick="openPage('admin-bookslot-list.html')">
-    📋 Booked Slot List
-    <span>View all team registrations</span>
-  </div>
-
-  <div class="card" onclick="openPage('admin-leaderboard.html')">
-    🏆 Kill Points Leaderboard
-    <span>Update & manage kills</span>
-  </div>
-
-  <div class="card" onclick="openPage('roomid.html')">
-    🎮 Room ID & Password
-    <span>Send room details to players</span>
-  </div>
+<!-- 💸 Withdraw Requests -->
+<div class="card">
+<h3>Withdraw Requests</h3>
+<div id="withdrawList"></div>
+</div>
 
 </div>
 
 <script type="module">
 
-/* 🔥 FIREBASE IMPORT */
-import { initializeApp } from
+import { initializeApp } from 
 "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 
-import { getAuth, onAuthStateChanged, signOut }
-from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-import { getDatabase }
+import { getDatabase, ref, onValue, update, remove } 
 from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-/* 🔥 FIREBASE CONFIG */
 const firebaseConfig = {
   apiKey: "AIzaSyDsJUtZdIXcsB0w_2MQhMBXxIgbI3ijOvg",
   authDomain: "incoinpaysliveearning.firebaseapp.com",
   databaseURL: "https://incoinpaysliveearning-default-rtdb.firebaseio.com",
   projectId: "incoinpaysliveearning",
-  storageBucket: "incoinpaysliveearning.appspot.com",
-  messagingSenderId: "1234567890",
-  appId: "1:1234567890:web:abcdef123456"
+  storageBucket: "incoinpaysliveearning.firebasestorage.app",
+  messagingSenderId: "971873814750",
+  appId: "1:971873814750:web:7418c7da119e4725ed9a4f"
 };
 
-/* 🔥 INIT */
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
 const db = getDatabase(app);
 
-/* 🔐 AUTH CHECK */
-onAuthStateChanged(auth, user => {
-  if(!user){
-    window.location.href = "login.html";
-  }
-});
+/* ==========================
+   📢 BROADCAST SYSTEM
+========================== */
 
-/* 🔐 AUTO LOGOUT AFTER 7 DAYS */
-const MAX_DAYS = 7;
-const now = Date.now();
-
-let loginTime = localStorage.getItem("admin_login_time");
-
-if(!loginTime){
-  localStorage.setItem("admin_login_time", now);
-}else{
-  const daysPassed = (now - loginTime) / (1000 * 60 * 60 * 24);
-  if(daysPassed >= MAX_DAYS){
-    logout();
-  }
+window.sendBroadcast=function(){
+  const msg=document.getElementById("broadcastMsg").value;
+  update(ref(db,"broadcast"),{
+    active:true,
+    message:msg,
+    type:"normal"
+  });
+  alert("Broadcast Sent");
 }
 
-/* 🔓 LOGOUT */
-window.logout = async function(){
-  await signOut(auth);
-  localStorage.removeItem("admin_login_time");
-  alert("Logged out successfully");
-  window.location.href = "login.html";
-};
+/* ==========================
+   💳 RECHARGE APPROVAL
+========================== */
 
-/* 🔗 NAVIGATION */
-window.openPage = function(page){
-  window.location.href = page;
-};
+const rechargeList=document.getElementById("rechargeList");
+
+onValue(ref(db,"rechargeRequests"),(snap)=>{
+  rechargeList.innerHTML="";
+  snap.forEach(child=>{
+    const data=child.val();
+    if(data.status==="pending"){
+      rechargeList.innerHTML+=`
+        <div>
+        ₹ ${data.amount}
+        <button onclick="approveRecharge('${child.key}','${data.uid}',${data.amount})">Approve</button>
+        </div>
+      `;
+    }
+  });
+});
+
+window.approveRecharge=function(id,uid,amount){
+
+  update(ref(db,"users/"+uid),{
+    wallet: increment(amount)
+  });
+
+  update(ref(db,"rechargeRequests/"+id),{
+    status:"approved"
+  });
+
+  alert("Recharge Approved");
+}
+
+/* ==========================
+   💸 WITHDRAW APPROVAL
+========================== */
+
+const withdrawList=document.getElementById("withdrawList");
+
+onValue(ref(db,"withdrawRequests"),(snap)=>{
+  withdrawList.innerHTML="";
+  snap.forEach(child=>{
+    const data=child.val();
+    if(data.status==="pending"){
+      withdrawList.innerHTML+=`
+        <div>
+        ₹ ${data.amount}
+        <button onclick="approveWithdraw('${child.key}','${data.uid}',${data.amount})">Approve</button>
+        </div>
+      `;
+    }
+  });
+});
+
+window.approveWithdraw=function(id,uid,amount){
+
+  update(ref(db,"users/"+uid),{
+    withdrawable: increment(-amount)
+  });
+
+  update(ref(db,"withdrawRequests/"+id),{
+    status:"approved"
+  });
+
+  alert("Withdraw Approved");
+}
 
 </script>
 
